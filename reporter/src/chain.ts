@@ -5,6 +5,8 @@ import {
   createPublicClient,
   createWalletClient,
   http,
+  parseEventLogs,
+  zeroAddress,
   type Address,
   type Hex,
   type LocalAccount,
@@ -134,21 +136,32 @@ export async function configure(chain: ChainKey, owner: LocalAccount, feeds: Fee
       d.txs[`setFeed ${f.pair}`] = hash;
       log("setFeed", f.pair, hash);
     }
-    if (!d.aggregators[f.pair]) {
-      const hash = await wallet.writeContract({
-        address: d.factory,
-        abi: kursFactoryAbi,
-        functionName: "deploy",
-        args: [id],
-      });
-      await pub.waitForTransactionReceipt({ hash, timeout: 180_000 });
-      d.aggregators[f.pair] = await pub.readContract({
+    const known = d.aggregators[f.pair];
+    if (!known || known === zeroAddress) {
+      // a clone may already exist (e.g. a previous run read a lagging RPC node)
+      const existing = await pub.readContract({
         address: d.factory,
         abi: kursFactoryAbi,
         functionName: "aggregatorOf",
         args: [id],
       });
-      d.txs[`aggregator ${f.pair}`] = hash;
+      if (existing !== zeroAddress) {
+        d.aggregators[f.pair] = existing;
+      } else {
+        const hash = await wallet.writeContract({
+          address: d.factory,
+          abi: kursFactoryAbi,
+          functionName: "deploy",
+          args: [id],
+        });
+        const rc = await pub.waitForTransactionReceipt({ hash, timeout: 180_000 });
+        // take the address from the receipt: public RPCs behind load balancers can
+        // answer a read right after the write from a node that has not seen it yet
+        const [ev] = parseEventLogs({ abi: kursFactoryAbi, logs: rc.logs, eventName: "AggregatorDeployed" });
+        if (!ev) throw new Error(`no AggregatorDeployed in ${hash}`);
+        d.aggregators[f.pair] = ev.args.aggregator;
+        d.txs[`aggregator ${f.pair}`] = hash;
+      }
       log("aggregator", f.pair, d.aggregators[f.pair]);
     }
     saveDeployment(d);
