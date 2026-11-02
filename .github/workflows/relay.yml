@@ -1,0 +1,31 @@
+# Keeps the public feeds fresh: one transmitter round every 10 minutes.
+# The transmitter is untrusted by design; it only relays reporter signatures.
+name: relay
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency: relay
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: reporter
+      - run: npx tsx src/cli.ts once
+        working-directory: reporter
+        env:
+          KURS_CHAINS: ${{ vars.KURS_CHAINS || 'portaldot' }}
+          DEPLOYER_PK: ${{ secrets.DEPLOYER_PK }}
+          REPORTER_1_PK: ${{ secrets.REPORTER_1_PK }}
+          REPORTER_2_PK: ${{ secrets.REPORTER_2_PK }}
+          REPORTER_3_PK: ${{ secrets.REPORTER_3_PK }}
+          REPORTER_4_PK: ${{ secrets.REPORTER_4_PK }}
+          REPORTER_5_PK: ${{ secrets.REPORTER_5_PK }}
