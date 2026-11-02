@@ -33,6 +33,7 @@ contract KursOracle {
         uint64 observedAt; // oldest observation timestamp in the bundle (conservative)
         uint64 updatedAt; // block.timestamp on this chain
         uint32 signerBitmap; // which reporter slots signed (bit i = slot i)
+        uint80 roundId; // lets a ring-buffer slot prove which round it holds
     }
 
     struct Observation {
@@ -46,6 +47,10 @@ contract KursOracle {
     // ------------------------------------------------------------- constants
 
     uint256 public constant MAX_REPORTERS = 31;
+    /// Rounds kept per feed. pallet-revive charges a storage deposit for every
+    /// new slot, so history is a ring buffer: after warm-up a round overwrites
+    /// an old slot and costs no new deposit.
+    uint80 public constant HISTORY = 64;
     bytes32 public constant OBSERVATION_TYPEHASH =
         keccak256("Observation(bytes32 feedId,uint80 roundId,int192 answer,uint64 observedAt)");
     bytes32 public immutable DOMAIN_SEPARATOR;
@@ -68,7 +73,7 @@ contract KursOracle {
     bytes32[] internal _feedIds;
     mapping(bytes32 => Feed) internal _feeds;
     mapping(bytes32 => uint80) public latestRoundId;
-    mapping(bytes32 => mapping(uint80 => Round)) internal _rounds;
+    mapping(bytes32 => mapping(uint256 => Round)) internal _rounds; // feedId => roundId % HISTORY => Round
 
     // ---------------------------------------------------------------- events
 
@@ -133,8 +138,13 @@ contract KursOracle {
         int192 median = _checkAndMedian(feed, answers);
 
         latestRoundId[feedId] = roundId;
-        _rounds[feedId][roundId] =
-            Round({answer: median, observedAt: oldest, updatedAt: uint64(block.timestamp), signerBitmap: bitmap});
+        _rounds[feedId][roundId % HISTORY] = Round({
+            answer: median,
+            observedAt: oldest,
+            updatedAt: uint64(block.timestamp),
+            signerBitmap: bitmap,
+            roundId: roundId
+        });
 
         emit RoundUpdated(feedId, roundId, median, oldest, bitmap, msg.sender);
     }
@@ -158,12 +168,15 @@ contract KursOracle {
     {
         if (!_feeds[feedId].exists) revert UnknownFeed(feedId);
         roundId = latestRoundId[feedId];
-        Round storage r = _rounds[feedId][roundId];
+        Round storage r = _rounds[feedId][roundId % HISTORY];
         return (roundId, r.answer, r.observedAt, r.updatedAt);
     }
 
-    function getRound(bytes32 feedId, uint80 roundId) external view returns (Round memory) {
-        return _rounds[feedId][roundId];
+    /// @notice Returns an empty Round (updatedAt == 0) if the round never existed
+    /// or has been overwritten by a round HISTORY rounds later.
+    function getRound(bytes32 feedId, uint80 roundId) external view returns (Round memory r) {
+        r = _rounds[feedId][roundId % HISTORY];
+        if (r.roundId != roundId) delete r;
     }
 
     function feed(bytes32 feedId) external view returns (Feed memory) {

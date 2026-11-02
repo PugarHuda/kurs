@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {KursOracle} from "../src/KursOracle.sol";
-import {KursAggregatorV3} from "../src/KursAggregatorV3.sol";
+import {KursAggregatorV3, KursAggregatorFactory} from "../src/KursAggregatorV3.sol";
 
 contract KursOracleTest is Test {
     KursOracle oracle;
@@ -210,6 +210,33 @@ contract KursOracleTest is Test {
         assertEq(agg.description(), "ETH / USD");
         vm.expectRevert(KursAggregatorV3.NoData.selector);
         agg.getRoundData(2);
+    }
+
+    function test_factoryClone() public {
+        KursAggregatorFactory f = new KursAggregatorFactory(oracle);
+        KursAggregatorV3 agg = KursAggregatorV3(f.deploy(ETH));
+        assertEq(address(agg).code.length, 45);
+        assertEq(f.aggregatorOf(ETH), address(agg));
+        oracle.transmit(ETH, 5, _bundle(5, _a(3000e8, 3002e8, 3001e8)));
+        (uint80 id, int256 ans,,,) = agg.latestRoundData();
+        assertEq(id, 5);
+        assertEq(ans, 3001e8);
+        assertEq(agg.description(), "ETH / USD");
+        vm.expectRevert(KursAggregatorV3.AlreadyInitialized.selector);
+        agg.initialize(oracle, bytes32(0));
+        vm.expectRevert(abi.encodeWithSelector(KursAggregatorFactory.Exists.selector, address(agg)));
+        f.deploy(ETH);
+    }
+
+    function test_ringBufferOverwritesOldRounds() public {
+        KursAggregatorV3 agg = new KursAggregatorV3(oracle, ETH);
+        oracle.transmit(ETH, 1, _bundle(1, _a(3000e8, 3000e8, 3000e8)));
+        uint80 later = 1 + oracle.HISTORY(); // lands in the same slot as round 1
+        oracle.transmit(ETH, later, _bundle(later, _a(3100e8, 3100e8, 3100e8)));
+        assertEq(oracle.getRound(ETH, 1).updatedAt, 0);
+        assertEq(oracle.getRound(ETH, later).answer, 3100e8);
+        vm.expectRevert(KursAggregatorV3.NoData.selector);
+        agg.getRoundData(1);
     }
 
     function testFuzz_medianWithinRange(int64 x, int64 y, int64 z) public {
