@@ -10,7 +10,8 @@
     "once": "tsx src/cli.ts once",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "evidence": "node evidence.mjs"
+    "evidence": "node evidence.mjs",
+    "ink-e2e": "tsx scripts/ink-e2e.ts"
   },
   "engines": {
     "node": ">=22"
@@ -19,6 +20,8 @@
     "viem": "^2.57.14"
   },
   "devDependencies": {
+    "@polkadot/api": "^17.0.2",
+    "@polkadot/keyring": "^14.0.3",
     "@types/node": "^26.6.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

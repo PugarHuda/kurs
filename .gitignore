@@ -13,3 +13,6 @@ target/
 .vercel
 deployments/local.json
 .playwright-mcp/
+
+.vercel
+contracts/out-pvm/
