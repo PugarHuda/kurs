@@ -30,5 +30,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci --prefix reporter && npm ci && npm run build
+      - run: npm ci --prefix ../reporter && npm ci && npm run build
         working-directory: web
