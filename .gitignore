@@ -12,3 +12,4 @@ target/
 .DS_Store
 .vercel
 deployments/local.json
+.playwright-mcp/

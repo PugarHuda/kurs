@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kurs: signed price feeds for Portaldot V3</title>
+    <meta name="description" content="Price feeds on Portaldot V3 signed by independent reporters, readable from Solidity and ink!, and portable to other EVM chains." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%2313233A'/><text x='16' y='23' font-size='18' text-anchor='middle' fill='%23FFB000' font-family='monospace' font-weight='700'>K</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <a class="skip" href="#board">Skip to the rates</a>
+    <header class="top">
+      <div class="brand">
+        <span class="mark">Kurs</span>
+        <p>Price feeds for Portaldot V3, signed by independent reporters and readable from Solidity and ink!.</p>
+      </div>
+      <nav id="networks" aria-label="Network"></nav>
+    </header>
+
+    <main>
+      <section id="board" class="board" aria-labelledby="board-title">
+        <div class="board-head">
+          <h1 id="board-title">Kurs hari ini <span>today's rates</span></h1>
+          <p id="board-meta" aria-live="polite"></p>
+        </div>
+        <table>
+          <caption class="visually-hidden">Latest on-chain round for each of <span id="feed-count"></span> feeds. Select a row for details.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Pair</th>
+              <th scope="col">Rate</th>
+              <th scope="col">Since last round</th>
+              <th scope="col">Signed by</th>
+              <th scope="col">Updated</th>
+            </tr>
+          </thead>
+          <tbody id="board-body"></tbody>
+        </table>
+        <p id="status" class="status" role="status"></p>
+      </section>
+
+      <div class="grid">
+        <section id="detail" class="detail" aria-live="polite"></section>
+
+        <aside class="side">
+          <section aria-labelledby="parity-title">
+            <h2 id="parity-title">Same round on other chains</h2>
+            <p>A round is a bundle of signatures. Relayed unchanged to another chain, it settles to the same number.</p>
+            <div id="parity"></div>
+          </section>
+
+          <section aria-labelledby="native-title">
+            <h2 id="native-title">Why Portaldot needs this</h2>
+            <p>
+              The V3 runtime ships an Oracle pallet, but its operator set has
+              <strong id="operators">…</strong>, so nothing can write a price to it.
+              No EVM precompile exposes it either. Kurs puts signed prices where contracts can read them today.
+            </p>
+          </section>
+        </aside>
+      </div>
+
+      <section class="pools" aria-labelledby="pools-title">
+        <h2 id="pools-title">Portaldot pools against Kurs</h2>
+        <p>Tokenised stocks already trade on Portaldot's built-in DEX. Here is what those pools say they are worth.</p>
+        <div id="pools"><p class="muted">Reading pools…</p></div>
+      </section>
+
+      <section class="use" aria-labelledby="use-title">
+        <h2 id="use-title">Read a feed from your contract</h2>
+        <div class="code-grid">
+          <figure>
+            <figcaption>Solidity, unchanged Chainlink interface</figcaption>
+            <pre><code>AggregatorV3Interface feed = AggregatorV3Interface(KURS_USD_IDR);
+(, int256 rate, , uint256 updatedAt, ) = feed.latestRoundData();
+require(block.timestamp - updatedAt &lt; 1 hours, "stale");</code></pre>
+          </figure>
+          <figure>
+            <figcaption>ink! v6, Solidity-ABI call into KursOracle</figcaption>
+            <pre><code>#[ink::contract_ref(abi = "sol")]
+pub trait KursOracle {
+    #[ink(message, name = "latestRound")]
+    fn latest_round(&amp;self, feed: FixedBytes&lt;32&gt;) -&gt; (u128, i128, u64, u64);
+}
+let (_, rate, _, updated) = KursOracleRef::from(oracle).latest_round(USD_IDR);</code></pre>
+          </figure>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>Kurs is open source. Every number on this page is read from public RPCs in your browser; there is no Kurs server.</p>
+      <p><a href="https://github.com/PugarHuda/kurs">Source on GitHub</a></p>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
