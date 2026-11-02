@@ -1,0 +1,26 @@
+{
+  "name": "@kurs/reporter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Kurs reporter + transmitter: fetch prices, sign observations, relay rounds to Portaldot V3 and other EVM chains",
+  "scripts": {
+    "observe": "tsx src/cli.ts observe",
+    "run": "tsx src/cli.ts run",
+    "once": "tsx src/cli.ts once",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "viem": "^2.57.14"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
