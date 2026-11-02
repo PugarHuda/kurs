@@ -1,4 +1,4 @@
-import { defineChain, recoverTypedDataAddress, type Hex, type LocalAccount, type Address } from "viem";
+import { defineChain, encodeAbiParameters, recoverTypedDataAddress, type Hex, type LocalAccount, type Address } from "viem";
 import { foundry, sepolia } from "viem/chains";
 import { FEEDS, feedId, type FeedConfig, type SourceId } from "./feeds.js";
 import { SOURCES } from "./sources.js";
@@ -13,7 +13,11 @@ export const portaldotTestnet = defineChain({
   blockExplorers: { default: { name: "Portaldot Scanner", url: "https://scanner-testnet-v3.portaldot.dev" } },
 });
 
-export const CHAINS = { portaldot: portaldotTestnet, sepolia, local: foundry } as const;
+// Sepolia's base fee swings several-fold within minutes; a 3x headroom keeps
+// transactions from sitting in the mempool (unused headroom is never charged).
+const sepoliaWithHeadroom = { ...sepolia, fees: { baseFeeMultiplier: 3 } } as const;
+
+export const CHAINS = { portaldot: portaldotTestnet, sepolia: sepoliaWithHeadroom, local: foundry } as const;
 export type ChainKey = keyof typeof CHAINS;
 
 // ------------------------------------------------------------------ EIP-712
@@ -260,4 +264,26 @@ export function largestAgreeingWindow(obs: SignedObservation[], maxSpreadBps: nu
     }
   }
   return best ? sorted.slice(best[0], best[1]) : [];
+}
+
+/** ERC-7412 payload for KursOracle.fulfillOracleQuery: abi.encode(feedId, roundId, Observation[]). */
+export function pullPayload(obs: SignedObservation[]): Hex {
+  if (obs.length === 0) throw new Error("empty bundle");
+  return encodeAbiParameters(
+    [
+      { type: "bytes32" },
+      { type: "uint80" },
+      {
+        type: "tuple[]",
+        components: [
+          { name: "answer", type: "int192" },
+          { name: "observedAt", type: "uint64" },
+          { name: "v", type: "uint8" },
+          { name: "r", type: "bytes32" },
+          { name: "s", type: "bytes32" },
+        ],
+      },
+    ],
+    [obs[0].feedId, obs[0].roundId, obs.map((o) => ({ answer: o.answer, observedAt: o.observedAt, v: o.v, r: o.r, s: o.s }))],
+  );
 }

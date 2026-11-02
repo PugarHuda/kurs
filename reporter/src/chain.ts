@@ -11,7 +11,14 @@ import {
   type Hex,
   type LocalAccount,
 } from "viem";
-import { kursFactoryAbi, kursFactoryBytecode, kursOracleAbi, kursOracleBytecode } from "./abi.js";
+import {
+  kursConverterAbi,
+  kursConverterBytecode,
+  kursFactoryAbi,
+  kursFactoryBytecode,
+  kursOracleAbi,
+  kursOracleBytecode,
+} from "./abi.js";
 import { FEEDS, feedId, type FeedConfig } from "./feeds.js";
 import { CHAINS, selectBundle, type ChainKey, type SignedObservation } from "./kurs.js";
 
@@ -24,6 +31,8 @@ export interface Deployment {
   oracle: Address;
   factory: Address;
   aggregators: Record<string, Address>;
+  /** KursConverter (ERC-7412 pull consumer) for USD/IDR */
+  converter?: Address;
   reporters: Address[];
   quorum: number;
   txs: Record<string, Hex>;
@@ -104,7 +113,22 @@ export async function deploy(
   };
   saveDeployment(d);
   await configure(chain, deployer, feeds);
-  return loadDeployment(chain)!;
+
+  const after = loadDeployment(chain)!;
+  if (!after.converter && feeds.some((f) => f.pair === "USD/IDR")) {
+    const hash = await wallet.deployContract({
+      abi: kursConverterAbi,
+      bytecode: kursConverterBytecode,
+      args: [oracle, feedId("USD/IDR"), 300],
+    });
+    const rc = await pub.waitForTransactionReceipt({ hash, timeout: 180_000 });
+    if (!rc.contractAddress) throw new Error(`converter deploy failed ${hash}`);
+    after.converter = rc.contractAddress;
+    after.txs.deployConverter = hash;
+    saveDeployment(after);
+    log("KursConverter", rc.contractAddress, hash);
+  }
+  return after;
 }
 
 /** Makes on-chain feed config match FEEDS and gives each feed an AggregatorV3 clone. */
