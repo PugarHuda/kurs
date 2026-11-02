@@ -44,7 +44,15 @@ async function collect(): Promise<SignedObservation[]> {
       urls.map(async (u) => {
         try {
           const r = await fetch(`${u.replace(/\/$/, "")}/observations`, { signal: AbortSignal.timeout(15_000) });
-          return ((await r.json()) as ReturnType<typeof toJson>[]).map(fromJson);
+          const body = (await r.json()) as unknown;
+          if (!Array.isArray(body)) return [];
+          return body.slice(0, 64).flatMap((item) => {
+            try {
+              return [fromJson(item as ReturnType<typeof toJson>)];
+            } catch {
+              return []; // malformed item from an untrusted reporter
+            }
+          });
         } catch (e) {
           console.warn("reporter unreachable", u, (e as Error).message);
           return [];

@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { encodeAbiParameters, hashTypedData, keccak256, recoverAddress, toBytes, concat } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { DOMAIN, TYPES, median, roundOf, scale, selectBundle, sign, trimOutliers, ROUND_SECONDS } from "../src/kurs.js";
+import {
+  DOMAIN,
+  TYPES,
+  largestAgreeingWindow,
+  median,
+  roundOf,
+  scale,
+  selectBundle,
+  sign,
+  trimOutliers,
+  ROUND_SECONDS,
+  type SignedObservation,
+} from "../src/kurs.js";
 import { FEEDS, feedId } from "../src/feeds.js";
 
 const acct = privateKeyToAccount("0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
@@ -119,6 +131,37 @@ describe("selectBundle", () => {
       v: ok.v === 27 ? 28 : 27,
     };
     expect(await selectBundle([stale, farRound, highS, ok], rules)).toEqual([ok]);
+  });
+
+  it("ignores malformed observations instead of throwing", async () => {
+    const ok = await sign(reps[0], "ETH/USD", round, 100_000n, at);
+    const junk = [
+      { ...ok, s: "not-hex" },
+      { ...ok, r: 42 },
+      { ...ok, reporter: null },
+      { ...ok, answer: "100" },
+      { ...ok, v: 99 },
+    ] as unknown as SignedObservation[];
+    expect(await selectBundle([...junk, ok], rules)).toEqual([ok]);
+  });
+
+  it("a coordinated minority cannot walk the median", async () => {
+    // 3 honest around 100_000, 2 colluders at the edge of the spread limit
+    const prices = [100_000n, 100_010n, 99_990n, 100_900n, 100_950n];
+    const obs = await Promise.all(
+      [...reps, privateKeyToAccount(`0x${"0f".repeat(32)}`)].slice(0, 5).map((r, i) =>
+        sign(r, "ETH/USD", round, prices[i], at),
+      ),
+    );
+    const window = largestAgreeingWindow(obs, 100);
+    const answers = window.map((o) => o.answer).sort((a, b) => (a < b ? -1 : 1));
+    expect(answers[answers.length >> 1]).toBeLessThanOrEqual(100_010n);
+  });
+
+  it("leaves only the median when reporters all disagree, so quorum fails and the round is skipped", () => {
+    const mk = (answer: bigint) => ({ answer }) as SignedObservation;
+    expect(largestAgreeingWindow([mk(100n), mk(200n), mk(300n)], 10).map((o) => o.answer)).toEqual([200n]);
+    expect(largestAgreeingWindow([], 10)).toEqual([]);
   });
 
   it("trims the outlier so the bundle fits maxSpreadBps", async () => {

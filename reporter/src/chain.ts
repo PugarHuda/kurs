@@ -191,12 +191,18 @@ export async function transmit(
 
   for (const f of feeds) {
     const id = feedId(f.pair);
-    const obs = await selectBundle(observations.filter((o) => o.feedId === id), {
-      allowed: reporters,
-      maxObservationAge,
-      maxSpreadBps: f.maxSpreadBps,
-      now,
-    });
+    let obs: SignedObservation[];
+    try {
+      obs = await selectBundle(observations.filter((o) => o.feedId === id), {
+        allowed: reporters,
+        maxObservationAge,
+        maxSpreadBps: f.maxSpreadBps,
+        now,
+      });
+    } catch (e) {
+      results.push({ chain, pair: f.pair, roundId: 0n, error: `bundle: ${(e as Error).message}` });
+      continue;
+    }
     const roundId = obs[0]?.roundId ?? 0n;
     const base = { chain, pair: f.pair, roundId };
     if (obs.length < quorum) {

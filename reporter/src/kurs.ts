@@ -174,7 +174,7 @@ export async function selectBundle(obs: SignedObservation[], rules: BundleRules)
   const valid: SignedObservation[] = [];
 
   for (const o of obs) {
-    if (o.v !== 27 && o.v !== 28) continue;
+    if (!wellFormed(o)) continue;
     if (BigInt(o.s) > SECP256K1_HALF_N) continue;
     if (o.roundId !== current && o.roundId !== current - 1n) continue;
     const at = Number(o.observedAt);
@@ -201,18 +201,63 @@ export async function selectBundle(obs: SignedObservation[], rules: BundleRules)
     byRound.set(o.roundId, m);
   }
   const best = [...byRound.entries()].sort((a, b) => b[1].size - a[1].size || (a[0] === current ? -1 : 1))[0];
-  let bundle = best ? [...best[1].values()].slice(0, 31) : [];
+  const bundle = best ? [...best[1].values()].slice(0, 31) : [];
 
-  // drop the observation furthest from the median while the spread is too wide
-  while (bundle.length >= 2) {
-    const sorted = bundle.map((o) => o.answer).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-    const m = sorted.length >> 1;
-    const med = sorted.length % 2 ? sorted[m] : (sorted[m - 1] + sorted[m]) / 2n;
-    const abs = med < 0n ? -med : med;
-    if ((sorted[sorted.length - 1] - sorted[0]) * 10_000n <= BigInt(rules.maxSpreadBps) * abs) break;
-    const dist = (o: SignedObservation) => (o.answer > med ? o.answer - med : med - o.answer);
-    const worst = bundle.reduce((w, o) => (dist(o) > dist(w) ? o : w));
-    bundle = bundle.filter((o) => o !== worst);
+  return largestAgreeingWindow(bundle, rules.maxSpreadBps);
+}
+
+const HEX32 = /^0x[0-9a-fA-F]{64}$/;
+const ADDR = /^0x[0-9a-fA-F]{40}$/;
+
+/** Remote reporters are untrusted: check every field's shape before using it. */
+function wellFormed(o: SignedObservation): boolean {
+  return (
+    (o.v === 27 || o.v === 28) &&
+    typeof o.r === "string" &&
+    HEX32.test(o.r) &&
+    typeof o.s === "string" &&
+    HEX32.test(o.s) &&
+    typeof o.feedId === "string" &&
+    HEX32.test(o.feedId) &&
+    typeof o.reporter === "string" &&
+    ADDR.test(o.reporter) &&
+    typeof o.roundId === "bigint" &&
+    typeof o.answer === "bigint" &&
+    typeof o.observedAt === "bigint"
+  );
+}
+
+const cmp = (a: bigint, b: bigint) => (a < b ? -1 : a > b ? 1 : 0);
+const medianOf = (sorted: bigint[]) => {
+  const m = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[m] : (sorted[m - 1] + sorted[m]) / 2n;
+};
+
+/**
+ * Largest contiguous run of sorted answers whose spread fits maxSpreadBps and
+ * that still contains the median of all valid answers. Trimming one value at
+ * a time from a moving median would let a coordinated minority walk the
+ * result; anchoring on the full-set median cannot. No such run => empty
+ * bundle, and the round is skipped.
+ */
+export function largestAgreeingWindow(obs: SignedObservation[], maxSpreadBps: number): SignedObservation[] {
+  if (obs.length === 0) return [];
+  const sorted = [...obs].sort((a, b) => cmp(a.answer, b.answer));
+  const anchor = medianOf(sorted.map((o) => o.answer));
+  let best: [number, number] | undefined; // [start, end) indices
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = sorted.length; j > i; j--) {
+      if (best && j - i <= best[1] - best[0]) break;
+      const lo = sorted[i].answer;
+      const hi = sorted[j - 1].answer;
+      if (anchor < lo || anchor > hi) continue;
+      const mid = medianOf(sorted.slice(i, j).map((o) => o.answer));
+      const abs = mid < 0n ? -mid : mid;
+      if ((hi - lo) * 10_000n <= BigInt(maxSpreadBps) * abs) {
+        best = [i, j];
+        break;
+      }
+    }
   }
-  return bundle;
+  return best ? sorted.slice(best[0], best[1]) : [];
 }
