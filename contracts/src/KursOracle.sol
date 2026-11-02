@@ -15,6 +15,11 @@ pragma solidity ^0.8.24;
 /// bridge rather than a single-chain oracle. Replay inside one chain is
 /// prevented because a feed only accepts a roundId above its latest one, and
 /// re-submitting a bundle on another chain is the intended relay path.
+///
+/// Push and pull: a relayer can push rounds with `transmit`, and a consumer can
+/// pull a fresh signed bundle into its own transaction through ERC-7412
+/// (`latestRoundFresh` reverts `OracleDataRequired`, the client fetches a bundle
+/// and calls `fulfillOracleQuery` in the same multicall).
 contract KursOracle {
     // ---------------------------------------------------------------- types
 
@@ -107,6 +112,8 @@ contract KursOracle {
     error ReportersDisagree(int192 low, int192 high, int192 median);
     error AnswerOutOfBounds(int192 answer);
     error BadConfig();
+    /// ERC-7412: the caller needs fresher data. oracleQuery = abi.encode(feedId, maxAge).
+    error OracleDataRequired(address oracleContract, bytes oracleQuery);
 
     // ------------------------------------------------------------ modifiers
 
@@ -129,10 +136,49 @@ contract KursOracle {
     /// @notice Submit a signed bundle for one round of one feed.
     /// @dev Permissionless: security comes from the signatures, not the caller.
     function transmit(bytes32 feedId, uint80 roundId, Observation[] calldata obs) external {
-        Feed storage feed = _feeds[feedId];
-        if (!feed.exists) revert UnknownFeed(feedId);
         uint80 latest = latestRoundId[feedId];
         if (roundId <= latest) revert StaleRound(roundId, latest);
+        _transmit(feedId, roundId, obs);
+    }
+
+    // ------------------------------------------------------------ ERC-7412 (pull)
+
+    /// @notice ERC-7412 oracle id.
+    function oracleId() external pure returns (bytes32) {
+        return bytes32("KURS");
+    }
+
+    /// @notice ERC-7412: accept a signed bundle pulled by the consumer's client.
+    /// signedOffchainData = abi.encode(bytes32 feedId, uint80 roundId, Observation[] obs).
+    /// Idempotent: if this round or a newer one is already on chain (another
+    /// consumer pulled it first), it returns instead of reverting, so a batched
+    /// consumer call that follows still succeeds.
+    function fulfillOracleQuery(bytes calldata signedOffchainData) external payable {
+        (bytes32 feedId, uint80 roundId, Observation[] memory obs) =
+            abi.decode(signedOffchainData, (bytes32, uint80, Observation[]));
+        if (roundId <= latestRoundId[feedId]) return;
+        _transmit(feedId, roundId, obs);
+    }
+
+    /// @notice Latest round, or revert ERC-7412 OracleDataRequired when the newest
+    /// observation is older than `maxAge` seconds (or the feed has no data yet).
+    function latestRoundFresh(bytes32 feedId, uint32 maxAge)
+        external
+        view
+        returns (uint80 roundId, int192 answer, uint64 observedAt, uint64 updatedAt)
+    {
+        if (!_feeds[feedId].exists) revert UnknownFeed(feedId);
+        roundId = latestRoundId[feedId];
+        Round storage r = _rounds[feedId][roundId % HISTORY];
+        if (roundId == 0 || r.observedAt + maxAge < block.timestamp) {
+            revert OracleDataRequired(address(this), abi.encode(feedId, maxAge));
+        }
+        return (roundId, r.answer, r.observedAt, r.updatedAt);
+    }
+
+    function _transmit(bytes32 feedId, uint80 roundId, Observation[] memory obs) internal {
+        Feed storage feed = _feeds[feedId];
+        if (!feed.exists) revert UnknownFeed(feedId);
 
         (int192[] memory answers, uint32 bitmap, uint64 oldest) = _verify(feedId, roundId, obs);
         int192 median = _checkAndMedian(feed, answers);
@@ -245,7 +291,7 @@ contract KursOracle {
     // ------------------------------------------------------------ internal
 
     /// Verifies freshness, signatures, membership and uniqueness of every observation.
-    function _verify(bytes32 feedId, uint80 roundId, Observation[] calldata obs)
+    function _verify(bytes32 feedId, uint80 roundId, Observation[] memory obs)
         internal
         view
         returns (int192[] memory answers, uint32 bitmap, uint64 oldest)
@@ -257,7 +303,7 @@ contract KursOracle {
         answers = new int192[](n);
         oldest = type(uint64).max;
         for (uint256 i; i < n; ++i) {
-            Observation calldata o = obs[i];
+            Observation memory o = obs[i];
             if (o.observedAt > block.timestamp + MAX_FUTURE_SKEW) revert ObservationInFuture(i, o.observedAt);
             if (o.observedAt + maxObservationAge < block.timestamp) revert ObservationTooOld(i, o.observedAt);
 
