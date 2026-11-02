@@ -79,9 +79,18 @@ export async function snapshot(d: Deployment): Promise<Snapshot> {
   ]);
 
   const range = NETWORKS[d.chain].logRange;
-  const logs = await c
+  // logs and state are independent: read them in parallel (getLogs is the slow one)
+  const logsP = c
     .getLogs({ address: d.oracle, event: roundUpdated, fromBlock: block > range ? block - range : 0n, toBlock: block })
     .catch(() => []);
+  const latestP = Promise.all(
+    FEEDS.map((feed) =>
+      c
+        .readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "latestRound", args: [feedId(feed.pair)] })
+        .catch(() => [0n, 0n, 0n, 0n] as const),
+    ),
+  );
+  const [logs, latest] = await Promise.all([logsP, latestP]);
   const events: RoundEvent[] = logs.map((l) => ({
     pair: pairById.get(l.args.feedId!) ?? "?",
     roundId: l.args.roundId!,
@@ -92,22 +101,17 @@ export async function snapshot(d: Deployment): Promise<Snapshot> {
     txHash: l.transactionHash!,
     blockNumber: l.blockNumber!,
   }));
-
-  const feeds = await Promise.all(
-    FEEDS.map(async (feed): Promise<FeedState> => {
-      const [roundId, answer, observedAt, updatedAt] = await c
-        .readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "latestRound", args: [feedId(feed.pair)] })
-        .catch(() => [0n, 0n, 0n, 0n] as const);
-      return {
-        feed,
-        roundId,
-        answer,
-        observedAt: Number(observedAt),
-        updatedAt: Number(updatedAt),
-        history: events.filter((e) => e.pair === feed.pair),
-      };
-    }),
-  );
+  const feeds = FEEDS.map((feed, i): FeedState => {
+    const [roundId, answer, observedAt, updatedAt] = latest[i];
+    return {
+      feed,
+      roundId,
+      answer,
+      observedAt: Number(observedAt),
+      updatedAt: Number(updatedAt),
+      history: events.filter((e) => e.pair === feed.pair),
+    };
+  });
   return { deployment: d, block, reporters: [...reporters], quorum, feeds };
 }
 

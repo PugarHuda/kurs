@@ -1,0 +1,7 @@
+contracts/lib
+contracts/out
+contracts/cache
+ink/kurs_consumer/target
+**/node_modules
+.env
+research
