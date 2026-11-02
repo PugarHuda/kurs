@@ -6,7 +6,12 @@
 
 Portaldot Hacker House 2026 · Track: **Multi-Chain & Cross-Chain Infra**
 
-> Testnet deployment: see [Deployment](#deployment-on-portaldot-v3-testnet). Every address and transaction hash is in [`deployments/`](deployments/) and [`docs/evidence.md`](docs/evidence.md).
+**Live dashboard:** https://kurs-ten-zeta.vercel.app · **Evidence:** [`docs/evidence.md`](docs/evidence.md) · **Deck:** [`docs/kurs-deck.pdf`](docs/kurs-deck.pdf)
+
+| Network | KursOracle | Status |
+|---|---|---|
+| Ethereum Sepolia | [`0x5bdd9713…6656f4`](https://sepolia.etherscan.io/address/0x5bdd9713ddc4f11e14bd3094882401cd122656f4) | live, 11 feeds, source verified on Sourcify (exact match) |
+| Portaldot V3 testnet | see [`deployments/`](deployments/) | deploying: waiting on testnet tPOT for Revive storage deposits (about 1,900 tPOT) |
 
 ![Kurs architecture](docs/architecture.png)
 
@@ -175,7 +180,9 @@ Instantiate with `new(oracle, keccak256("USD/IDR"), 3600)`, then call `quote(100
 | Substrate RPC | `wss://test-node-v3.portaldot.dev` |
 | Explorer | https://scanner-testnet-v3.portaldot.dev |
 
-Contract addresses, every transaction hash, and the reporter set are in [`deployments/portaldot.json`](deployments/portaldot.json) and summarised in [`docs/evidence.md`](docs/evidence.md).
+Contract addresses, every transaction hash, and the reporter set are in [`deployments/`](deployments/) and summarised in [`docs/evidence.md`](docs/evidence.md) (regenerate with `cd reporter && npm run evidence`).
+
+Measured on V3 before deploying: `eth_estimateGas` for `KursOracle` comes to about 711 tPOT, almost all of it the code storage deposit (0.06 tPOT per byte plus a 30% code-hash lockup). The ink! contract (11.6 KB of PolkaVM code) is about 900 tPOT. These deposits are refundable when code is removed.
 
 ## Testing
 
@@ -197,7 +204,7 @@ What the tests cover: median of odd and even sets, a 2-of-5 lying minority canno
 
 ## Roadmap
 
-- Done during the hacker house: oracle, clones, ring buffer, reporter and transmitter, 11 feeds, ink! v6 consumer, dashboard, Portaldot + Sepolia deployment.
+- Done during the hacker house: oracle, clones, ring buffer, reporter and transmitter, 11 feeds, ink! v6 consumer, dashboard, Sepolia deployment with live rounds.
 - Next: independent reporter operators from the Portaldot community; owner moved to a native Multisig with a time delay; Kurs reporters as operators of the runtime `Oracle` pallet, so native pallets and contracts read the same prices; a read precompile proposal for the `Oracle` pallet; more chains in the relay (Base, BSC, Arbitrum), plus the bridge at bridge.portaldot.dev for POT-denominated feeds.
 
 ## Prior work and third-party code
