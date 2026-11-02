@@ -151,16 +151,34 @@ export const fromJson = (o: ReturnType<typeof toJson>): SignedObservation => ({
   observedAt: BigInt(o.observedAt),
 });
 
+const SECP256K1_HALF_N = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0n;
+const MAX_FUTURE_SKEW = 300; // matches KursOracle.MAX_FUTURE_SKEW
+
+export interface BundleRules {
+  allowed: readonly Address[]; // on-chain reporter set
+  maxObservationAge: number; // seconds, from the contract
+  maxSpreadBps: number; // from the feed
+  now?: number; // unix seconds
+}
+
 /**
- * Keeps only observations the contract would accept, so one bad remote
- * reporter cannot make a whole bundle revert: signature recovers to the
- * claimed reporter, reporter is in the on-chain set, one per reporter,
- * all on the most common roundId, at most 31.
+ * Repeats the contract's checks off-chain so one bad reporter cannot make a
+ * whole bundle revert: signature form (v, low-s) and signer, membership,
+ * freshness, current/previous round only, one vote per reporter, then trims
+ * the observation furthest from the median until the spread fits.
  */
-export async function selectBundle(obs: SignedObservation[], allowed: readonly Address[]): Promise<SignedObservation[]> {
-  const allow = new Set(allowed.map((a) => a.toLowerCase()));
+export async function selectBundle(obs: SignedObservation[], rules: BundleRules): Promise<SignedObservation[]> {
+  const now = rules.now ?? Math.floor(Date.now() / 1000);
+  const allow = new Set(rules.allowed.map((a) => a.toLowerCase()));
+  const current = roundOf(now);
   const valid: SignedObservation[] = [];
+
   for (const o of obs) {
+    if (o.v !== 27 && o.v !== 28) continue;
+    if (BigInt(o.s) > SECP256K1_HALF_N) continue;
+    if (o.roundId !== current && o.roundId !== current - 1n) continue;
+    const at = Number(o.observedAt);
+    if (at > now + MAX_FUTURE_SKEW || at + rules.maxObservationAge < now) continue;
     try {
       const signer = await recoverTypedDataAddress({
         domain: DOMAIN,
@@ -174,11 +192,27 @@ export async function selectBundle(obs: SignedObservation[], allowed: readonly A
       // malformed signature: drop it
     }
   }
-  const votes = new Map<bigint, number>();
-  for (const o of valid) votes.set(o.roundId, (votes.get(o.roundId) ?? 0) + 1);
-  const round = [...votes.entries()].sort((a, b) => b[1] - a[1] || (b[0] > a[0] ? 1 : -1))[0]?.[0];
-  const seen = new Set<string>();
-  return valid
-    .filter((o) => o.roundId === round && !seen.has(o.reporter.toLowerCase()) && seen.add(o.reporter.toLowerCase()))
-    .slice(0, 31);
+
+  // one vote per reporter per round; prefer the current round on a tie
+  const byRound = new Map<bigint, Map<string, SignedObservation>>();
+  for (const o of valid) {
+    const m = byRound.get(o.roundId) ?? new Map<string, SignedObservation>();
+    if (!m.has(o.reporter.toLowerCase())) m.set(o.reporter.toLowerCase(), o);
+    byRound.set(o.roundId, m);
+  }
+  const best = [...byRound.entries()].sort((a, b) => b[1].size - a[1].size || (a[0] === current ? -1 : 1))[0];
+  let bundle = best ? [...best[1].values()].slice(0, 31) : [];
+
+  // drop the observation furthest from the median while the spread is too wide
+  while (bundle.length >= 2) {
+    const sorted = bundle.map((o) => o.answer).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const m = sorted.length >> 1;
+    const med = sorted.length % 2 ? sorted[m] : (sorted[m - 1] + sorted[m]) / 2n;
+    const abs = med < 0n ? -med : med;
+    if ((sorted[sorted.length - 1] - sorted[0]) * 10_000n <= BigInt(rules.maxSpreadBps) * abs) break;
+    const dist = (o: SignedObservation) => (o.answer > med ? o.answer - med : med - o.answer);
+    const worst = bundle.reduce((w, o) => (dist(o) > dist(w) ? o : w));
+    bundle = bundle.filter((o) => o !== worst);
+  }
+  return bundle;
 }

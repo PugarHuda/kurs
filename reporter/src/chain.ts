@@ -181,19 +181,22 @@ export async function transmit(
   if (!d) throw new Error(`no deployment for ${chain}`);
   const { pub, wallet } = clients(chain, transmitter);
   if (!wallet) throw new Error("no wallet");
-  const [quorum, reporters] = await Promise.all([
+  const [quorum, reporters, maxObservationAge] = await Promise.all([
     pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "quorum" }),
     pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "reporters" }),
+    pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "maxObservationAge" }),
   ]);
   const now = Math.floor(Date.now() / 1000);
   const results: TransmitResult[] = [];
 
   for (const f of feeds) {
     const id = feedId(f.pair);
-    const obs = await selectBundle(
-      observations.filter((o) => o.feedId === id),
-      reporters,
-    );
+    const obs = await selectBundle(observations.filter((o) => o.feedId === id), {
+      allowed: reporters,
+      maxObservationAge,
+      maxSpreadBps: f.maxSpreadBps,
+      now,
+    });
     const roundId = obs[0]?.roundId ?? 0n;
     const base = { chain, pair: f.pair, roundId };
     if (obs.length < quorum) {

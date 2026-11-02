@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { encodeAbiParameters, hashTypedData, keccak256, recoverAddress, toBytes, concat } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { DOMAIN, TYPES, median, roundOf, scale, sign, trimOutliers, ROUND_SECONDS } from "../src/kurs.js";
+import { DOMAIN, TYPES, median, roundOf, scale, selectBundle, sign, trimOutliers, ROUND_SECONDS } from "../src/kurs.js";
 import { FEEDS, feedId } from "../src/feeds.js";
 
 const acct = privateKeyToAccount("0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
@@ -84,21 +84,48 @@ describe("feed config", () => {
 });
 
 describe("selectBundle", () => {
-  const reps = [1, 2, 3].map((i) => privateKeyToAccount(`0x${(i + 10).toString(16).padStart(64, "0")}`));
+  const reps = [1, 2, 3, 4].map((i) => privateKeyToAccount(`0x${(i + 10).toString(16).padStart(64, "0")}`));
   const outsider = privateKeyToAccount(`0x${"77".repeat(32)}`);
+  const now = 1_793_633_700;
+  const round = roundOf(now);
+  const at = BigInt(now - 5);
+  const rules = { allowed: reps.map((r) => r.address), maxObservationAge: 3600, maxSpreadBps: 100, now };
 
-  it("drops forged, outsider, duplicate and off-round observations", async () => {
-    const { selectBundle } = await import("../src/kurs.js");
-    const good = await Promise.all(reps.map((r) => sign(r, "ETH/USD", 9n, 100n, 1n)));
-    const dup = await sign(reps[0], "ETH/USD", 9n, 101n, 1n);
-    const out = await sign(outsider, "ETH/USD", 9n, 100n, 1n);
-    const offRound = await sign(reps[1], "ETH/USD", 8n, 100n, 1n);
-    const forged = { ...good[2], answer: 999n }; // signature no longer matches
-    const picked = await selectBundle(
-      [dup, ...good.slice(0, 2), out, offRound, forged],
-      reps.map((r) => r.address),
-    );
+  it("keeps one valid observation per reporter on the current round", async () => {
+    const good = await Promise.all(reps.slice(0, 3).map((r) => sign(r, "ETH/USD", round, 100_000n, at)));
+    const dup = await sign(reps[0], "ETH/USD", round, 100_010n, at);
+    const out = await sign(outsider, "ETH/USD", round, 100_000n, at);
+    const forged = { ...good[2], answer: 999n };
+    const picked = await selectBundle([...good.slice(0, 2), dup, out, forged], rules);
     expect(picked.map((o) => o.reporter)).toEqual([reps[0].address, reps[1].address]);
-    expect(picked.every((o) => o.roundId === 9n)).toBe(true);
+  });
+
+  it("one reporter spamming the previous round cannot outvote the current round", async () => {
+    const spam = await Promise.all([1n, 2n, 3n].map((k) => sign(reps[3], "ETH/USD", round - 1n, 100_000n + k, at)));
+    const honest = await Promise.all(reps.slice(0, 2).map((r) => sign(r, "ETH/USD", round, 100_000n, at)));
+    const picked = await selectBundle([...spam, ...honest], rules);
+    expect(picked.every((o) => o.roundId === round)).toBe(true);
+    expect(picked).toHaveLength(2);
+  });
+
+  it("drops stale, far-round and high-s observations", async () => {
+    const stale = await sign(reps[0], "ETH/USD", round, 100_000n, BigInt(now - 7200));
+    const farRound = await sign(reps[1], "ETH/USD", round - 5n, 100_000n, at);
+    const ok = await sign(reps[2], "ETH/USD", round, 100_000n, at);
+    const n = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
+    const highS = {
+      ...ok,
+      s: `0x${(n - BigInt(ok.s)).toString(16).padStart(64, "0")}` as `0x${string}`,
+      v: ok.v === 27 ? 28 : 27,
+    };
+    expect(await selectBundle([stale, farRound, highS, ok], rules)).toEqual([ok]);
+  });
+
+  it("trims the outlier so the bundle fits maxSpreadBps", async () => {
+    const prices = [100_000n, 100_050n, 99_980n, 130_000n];
+    const obs = await Promise.all(reps.map((r, i) => sign(r, "ETH/USD", round, prices[i], at)));
+    const picked = await selectBundle(obs, rules);
+    expect(picked.map((o) => o.answer)).not.toContain(130_000n);
+    expect(picked).toHaveLength(3);
   });
 });
