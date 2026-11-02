@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 560" font-family="Archivo, Helvetica, Arial, sans-serif" font-size="14">
+  <title>Kurs architecture</title>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#18282b"/>
+    </marker>
+    <style>
+      .box{fill:#fff;stroke:#18282b;stroke-width:1.5}
+      .dark{fill:#13233a}
+      .t{fill:#18282b}
+      .w{fill:#e9eef5}
+      .led{fill:#ffb000}
+      .s{fill:#4a5c5e;font-size:12px}
+      .h{font-weight:800;font-size:16px}
+      .ln{stroke:#18282b;stroke-width:1.5;fill:none;marker-end:url(#a)}
+      .dash{stroke-dasharray:5 4}
+    </style>
+  </defs>
+  <rect width="1100" height="560" fill="#e8efe6"/>
+
+  <!-- sources -->
+  <text x="30" y="40" class="t h">1. Sources (off chain)</text>
+  <rect x="30" y="55" width="230" height="200" rx="6" class="box"/>
+  <text x="45" y="82" class="t">Exchanges: Binance, Coinbase,</text>
+  <text x="45" y="100" class="t">Kraken, OKX</text>
+  <text x="45" y="126" class="t">Aggregators: CoinGecko,</text>
+  <text x="45" y="144" class="t">CoinPaprika, DefiLlama</text>
+  <text x="45" y="170" class="t">Chainlink on Ethereum Sepolia</text>
+  <text x="45" y="196" class="t">FX + equities: er-api, Yahoo</text>
+  <text x="45" y="222" class="t">Portaldot AssetConversion pools</text>
+  <text x="45" y="240" class="s">(state_call, 5 blocks sampled)</text>
+
+  <!-- reporters -->
+  <text x="320" y="40" class="t h">2. Reporters</text>
+  <rect x="320" y="55" width="230" height="200" rx="6" class="dark"/>
+  <text x="335" y="82" class="w">Each reporter, own key:</text>
+  <text x="335" y="106" class="w">median of its sources</text>
+  <text x="335" y="128" class="w">signs EIP-712 Observation</text>
+  <text x="335" y="150" class="led">(feedId, roundId, answer, time)</text>
+  <text x="335" y="178" class="w">roundId = time bucket, so</text>
+  <text x="335" y="198" class="w">reporters agree without talking</text>
+  <circle cx="345" cy="230" r="6" class="led"/><circle cx="365" cy="230" r="6" class="led"/><circle cx="385" cy="230" r="6" class="led"/><circle cx="405" cy="230" r="6" class="led"/><circle cx="425" cy="230" r="6" class="led"/>
+  <text x="440" y="235" class="w" font-size="12">quorum 3 of 5</text>
+
+  <!-- transmitter -->
+  <text x="610" y="40" class="t h">3. Transmitter (anyone)</text>
+  <rect x="610" y="55" width="220" height="200" rx="6" class="box"/>
+  <text x="625" y="82" class="t">re-checks every signature</text>
+  <text x="625" y="104" class="t">drops outsiders, duplicates,</text>
+  <text x="625" y="126" class="t">stale or off-round reports</text>
+  <text x="625" y="152" class="t">keeps the agreeing window</text>
+  <text x="625" y="174" class="t">around the median</text>
+  <text x="625" y="200" class="t">sends when price moves or</text>
+  <text x="625" y="222" class="t">heartbeat expires</text>
+  <text x="625" y="244" class="s">no trust needed in the sender</text>
+
+  <path d="M260,155 L318,155" class="ln"/>
+  <path d="M550,155 L608,155" class="ln"/>
+
+  <!-- portaldot -->
+  <rect x="30" y="300" width="700" height="230" rx="8" fill="#dde7da" stroke="#18282b" stroke-width="1.5"/>
+  <text x="50" y="328" class="t h">Portaldot V3: pallet-revive</text>
+
+  <rect x="50" y="345" width="260" height="165" rx="6" class="dark"/>
+  <text x="65" y="372" class="led h">KursOracle (EVM)</text>
+  <text x="65" y="396" class="w">verifies quorum of signatures</text>
+  <text x="65" y="418" class="w">rejects spread, stale, bounds</text>
+  <text x="65" y="440" class="w">stores on-chain median</text>
+  <text x="65" y="462" class="w">64-round ring buffer per feed</text>
+  <text x="65" y="490" class="w" font-size="12">no new storage deposit per round</text>
+
+  <rect x="340" y="345" width="170" height="70" rx="6" class="box"/>
+  <text x="355" y="370" class="t" font-weight="700">AggregatorV3 clones</text>
+  <text x="355" y="392" class="s">45-byte clone per feed</text>
+  <text x="355" y="406" class="s">Chainlink interface</text>
+
+  <rect x="340" y="430" width="170" height="80" rx="6" class="box"/>
+  <text x="355" y="455" class="t" font-weight="700">KursRemit (ink! v6)</text>
+  <text x="355" y="477" class="s">PolkaVM contract calls</text>
+  <text x="355" y="493" class="s">KursOracle via Solidity ABI</text>
+
+  <rect x="535" y="345" width="175" height="165" rx="6" class="box"/>
+  <text x="550" y="370" class="t" font-weight="700">Consumers</text>
+  <text x="550" y="394" class="s">lending, vaults, perps,</text>
+  <text x="550" y="410" class="s">stablecoins, RWA tokens</text>
+  <text x="550" y="434" class="s">(TSLA/NVDA/AAPL... pools</text>
+  <text x="550" y="450" class="s">already on the native DEX)</text>
+  <text x="550" y="478" class="s">Oracle pallet: 0 operators</text>
+  <text x="550" y="494" class="s">today, Kurs can fill it</text>
+
+  <path d="M310,385 L338,380" class="ln"/>
+  <path d="M310,470 L338,470" class="ln" style="marker-start:url(#a)"/>
+  <path d="M510,380 L533,400" class="ln"/>
+  <path d="M510,470 L533,450" class="ln"/>
+
+  <path d="M700,255 L700,280 L180,280 L180,343" class="ln"/>
+
+  <!-- other chains -->
+  <rect x="780" y="300" width="290" height="230" rx="8" fill="#fff" stroke="#18282b" stroke-width="1.5" class="dash"/>
+  <text x="800" y="328" class="t h">Other EVM chains (Sepolia)</text>
+  <rect x="800" y="345" width="250" height="90" rx="6" class="dark"/>
+  <text x="815" y="372" class="led h">KursOracle, same code</text>
+  <text x="815" y="396" class="w">same reporter set</text>
+  <text x="815" y="418" class="w">same bundle, same answer</text>
+  <text x="800" y="465" class="t">The signature domain has no chainId,</text>
+  <text x="800" y="485" class="t">so a round signed once settles</text>
+  <text x="800" y="505" class="t">identically wherever it is relayed.</text>
+  <path d="M800,255 L920,255 L920,343" class="ln"/>
+  <text x="845" y="245" class="s">relay unchanged</text>
+</svg>
