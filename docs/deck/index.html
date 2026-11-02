@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Kurs: pitch deck</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet" />
+<style>
+@font-face { font-family: "DSEG7"; src: url("../../web/public/DSEG7Classic-Bold.woff2") format("woff2"); }
+@page { size: 1600px 900px; margin: 0; }
+:root { --paper:#e8efe6; --paper-2:#dde7da; --ink:#18282b; --soft:#4a5c5e; --board:#13233a; --board-2:#1b2f4c; --led:#ffb000; --red:#c4162f; --line:#b9c8bc; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #777; }
+body { font-family: "Archivo", sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.slide { width: 1600px; height: 900px; padding: 90px 110px; background: var(--paper); position: relative; overflow: hidden; page-break-after: always; margin: 0 auto 24px; display: flex; flex-direction: column; }
+@media print { .slide { margin: 0; } html, body { background: var(--paper); } }
+.slide.dark { background: var(--board); color: #e9eef5; }
+.n { position: absolute; right: 110px; bottom: 50px; font-family: "DSEG7"; color: var(--soft); font-size: 20px; }
+.dark .n { color: #5c7392; }
+h1 { font-size: 150px; font-weight: 900; font-variation-settings: "wdth" 125; letter-spacing: -0.04em; margin: 0; line-height: 0.9; }
+h2 { font-size: 64px; font-weight: 850; font-variation-settings: "wdth" 115; letter-spacing: -0.02em; margin: 0 0 40px; line-height: 1.02; max-width: 22ch; }
+p, li { font-size: 30px; line-height: 1.4; }
+p { margin: 0 0 22px; max-width: 46ch; }
+.soft { color: var(--soft); }
+.dark .soft { color: #9fb0c6; }
+.led { font-family: "DSEG7"; color: var(--led); text-shadow: 0 0 18px rgba(255,176,0,.45); }
+.row { display: flex; gap: 70px; align-items: flex-start; }
+.col { flex: 1; }
+table { border-collapse: collapse; width: 100%; font-size: 28px; }
+th { text-align: left; font-weight: 700; border-bottom: 3px solid currentColor; padding: 10px 14px 10px 0; }
+td { border-bottom: 1px solid var(--line); padding: 14px 14px 14px 0; vertical-align: top; }
+.dark td { border-color: var(--board-2); }
+.bad { color: var(--red); font-weight: 800; }
+.dark .bad { color: #ff6b6b; }
+.board { background: var(--board); border-radius: 16px; padding: 34px 44px; color: #e9eef5; box-shadow: inset 0 0 0 8px var(--board-2); }
+.board .r { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--board-2); padding: 16px 0; font-size: 30px; }
+.board .r:first-child { border-top: 0; }
+.board .r .led { font-size: 56px; }
+ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; }
+ol.steps li { counter-increment: s; font-size: 26px; border-top: 4px solid var(--ink); padding-top: 18px; }
+ol.steps li::before { content: counter(s); font-family: "DSEG7"; color: var(--led); background: var(--board); display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; font-size: 22px; margin-bottom: 14px; }
+ol.steps b { display: block; font-size: 30px; margin-bottom: 8px; }
+.big { font-family: "DSEG7"; font-size: 120px; color: var(--led); line-height: 1; text-shadow: 0 0 22px rgba(255,176,0,.45); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px 60px; }
+.stats div p { font-size: 26px; margin-top: 10px; }
+img.diagram { height: 620px; width: auto; max-width: 100%; border-radius: 10px; align-self: center; }
+code { font-family: Consolas, monospace; font-size: .85em; }
+ul { margin: 0; padding-left: 1.1em; }
+li { margin-bottom: 12px; }
+.tag { display: inline-block; border: 2px solid currentColor; border-radius: 999px; padding: 4px 16px; font-size: 22px; margin: 0 10px 10px 0; }
+</style>
+</head>
+<body>
+
+<section class="slide dark">
+  <p class="soft" style="font-size:28px">Portaldot Hacker House 2026 · Multi-Chain &amp; Cross-Chain Infra</p>
+  <div style="margin-top:auto">
+    <h1 style="color:#fff">Kurs</h1>
+    <p style="font-size:44px;max-width:30ch;margin-top:36px">Price feeds for Portaldot V3, signed by independent reporters, readable from Solidity and ink!, portable to any EVM chain.</p>
+    <p class="soft">Kurs: Indonesian for exchange rate, the number on every money-changer board.</p>
+  </div>
+  <span class="n">01</span>
+</section>
+
+<section class="slide">
+  <h2>Portaldot already has money apps. None of them can read a price.</h2>
+  <div class="row">
+    <div class="col">
+      <table>
+        <tr><th>Checked on V3 testnet, spec 3002</th><th>Found</th></tr>
+        <tr><td>Oracle pallet (index 85)</td><td class="bad">0 values</td></tr>
+        <tr><td>Oracle operator set</td><td class="bad">empty</td></tr>
+        <tr><td>Oracle precompile for EVM</td><td class="bad">none</td></tr>
+        <tr><td>Chainlink, Pyth, RedStone</td><td class="bad">not deployed</td></tr>
+        <tr><td>Tokenised stocks on the native DEX</td><td>TSLA, NVDA, AAPL, AMZN, META</td></tr>
+        <tr><td>Hacker-house lending, stablecoin, escrow apps</td><td>a dozen and counting</td></tr>
+      </table>
+    </div>
+  </div>
+  <span class="n">02</span>
+</section>
+
+<section class="slide">
+  <h2>Ask the pools what TSLA is worth</h2>
+  <div class="row">
+    <div class="col">
+      <p>Route one TSLA token through Portaldot's own pools (TSLA → DUCAT → tPOT → pUSD) and you get <b class="bad">about $0.04</b>.</p>
+      <p>Kurs says <b>about $410</b>.</p>
+      <p class="soft">A lending market that prices collateral from these pools can be drained by anyone with a few swaps. That is how most DeFi exploits start.</p>
+    </div>
+    <div class="col board">
+      <div class="r"><span>TSLA / DUCAT pool</span><span class="led" style="color:#ff6b6b">0.04</span></div>
+      <div class="r"><span>TSLA / USD on Kurs</span><span class="led">410.00</span></div>
+      <div class="r"><span>Off by</span><span class="led" style="color:#ff6b6b">10000×</span></div>
+    </div>
+  </div>
+  <span class="n">03</span>
+</section>
+
+<section class="slide">
+  <h2>How Kurs works</h2>
+  <ol class="steps">
+    <li><b>Read</b>Reporters read exchanges, aggregators, Chainlink on Ethereum, FX and equity quotes, and Portaldot's own pools.</li>
+    <li><b>Sign</b>Each reporter signs its own number with EIP-712. No chain id in the domain.</li>
+    <li><b>Relay</b>Anyone submits the bundle. The sender is not trusted; the signatures are.</li>
+    <li><b>Settle</b>KursOracle checks a majority quorum, freshness, spread and bounds, and stores the median.</li>
+  </ol>
+  <p style="margin-top:60px;max-width:60ch">A minority of dishonest reporters cannot move the median, and cannot forge a round.</p>
+  <span class="n">04</span>
+</section>
+
+<section class="slide">
+  <h2 style="margin-bottom:24px">One oracle, both VMs, every chain</h2>
+  <img class="diagram" src="../architecture.png" alt="Kurs architecture" />
+  <span class="n">05</span>
+</section>
+
+<section class="slide">
+  <h2>Why this has to be Portaldot</h2>
+  <div class="row">
+    <div class="col">
+      <p><b>Dual VM in one pallet.</b> Solidity reads Kurs through the Chainlink interface. ink! v6 reads the same contract through a Solidity-ABI call. One oracle, not two.</p>
+      <p><b>A native price to export.</b> tPOT/pUSD comes from <code>pallet-asset-conversion</code> through a runtime API, sampled over 20 minutes of blocks, then relayed to Ethereum with the same signatures.</p>
+    </div>
+    <div class="col">
+      <p><b>A slot already waiting.</b> The runtime ships an Oracle pallet with no operators. Kurs reporters are ready to fill it, so native pallets and contracts read the same prices.</p>
+      <p><b>Built for Revive's costs.</b> A 64-round ring buffer and 45-byte clones mean a new round adds no storage deposit.</p>
+    </div>
+  </div>
+  <span class="n">06</span>
+</section>
+
+<section class="slide dark">
+  <h2 style="color:#fff">Built during the hacker house</h2>
+  <div class="stats">
+    <div><div class="big">11</div><p class="soft">feeds: BTC, ETH, DOT, USDT, USD/IDR, five equities, tPOT</p></div>
+    <div><div class="big">37</div><p class="soft">tests: 22 Solidity incl. fuzz, 15 TypeScript incl. anvil end-to-end</p></div>
+    <div><div class="big">2</div><p class="soft">VMs reading one oracle: EVM and PolkaVM (ink! v6)</p></div>
+    <div><div class="big">5</div><p class="soft">reporters, quorum 3, median on chain</p></div>
+    <div><div class="big">0</div><p class="soft">servers: the dashboard reads public RPCs in the browser</p></div>
+    <div><div class="big">45</div><p class="soft">bytes per Chainlink-compatible feed address</p></div>
+  </div>
+  <span class="n">07</span>
+</section>
+
+<section class="slide">
+  <h2>Proof on chain</h2>
+  <div id="evidence">
+    <table>
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>KursOracle, factory, 11 feed clones</td><td>Portaldot V3 testnet, see <code>deployments/portaldot.json</code></td></tr>
+      <tr><td>Live rounds, every signer recorded</td><td>RoundUpdated events, dashboard and explorer</td></tr>
+      <tr><td>KursRemit (ink! v6) quoting USD → IDR</td><td>Quoted event from a cross-VM read</td></tr>
+      <tr><td>Same signed round on Sepolia</td><td>identical round id and answer on both chains</td></tr>
+    </table>
+    <p class="soft" style="margin-top:30px">Every address and transaction hash: <code>github.com/PugarHuda/kurs/blob/main/docs/evidence.md</code></p>
+  </div>
+  <span class="n">08</span>
+</section>
+
+<section class="slide">
+  <h2>Who pays, and why</h2>
+  <div class="row">
+    <div class="col">
+      <p><b>Users:</b> every Portaldot app that moves value against a price. Lending (DotProof), stablecoins (Ballast, StableTap, pUSD), tokenised stocks (PASTX pools), escrow and payroll in IDR.</p>
+      <p><b>Feed sponsorship:</b> an app pays a monthly POT fee per feed it needs at a given heartbeat. Sponsors fund reporter rewards and transmit gas.</p>
+    </div>
+    <div class="col">
+      <p><b>Export fees:</b> Portaldot-native prices (tPOT, ecosystem tokens) relayed to Ethereum, BNB and Base for bridges and CEX listings.</p>
+      <p><b>Reporter market:</b> community operators stake POT to join the set and earn from sponsorship. Misbehaviour is visible on chain in every round's signer bitmap.</p>
+    </div>
+  </div>
+  <span class="n">09</span>
+</section>
+
+<section class="slide">
+  <h2>Next</h2>
+  <div class="row">
+    <div class="col">
+      <ul>
+        <li>Independent reporter operators from the Portaldot community</li>
+        <li>Owner key behind Portaldot's native Multisig + Proxy with a delay</li>
+        <li>Kurs reporters as operators of the runtime Oracle pallet</li>
+      </ul>
+    </div>
+    <div class="col">
+      <ul>
+        <li>Read precompile for the Oracle pallet</li>
+        <li>Relay to Base, BSC, Arbitrum; POT feeds via bridge.portaldot.dev</li>
+        <li>Paid equity data before mainnet; external audit</li>
+      </ul>
+    </div>
+  </div>
+  <span class="n">10</span>
+</section>
+
+<section class="slide dark">
+  <h2 style="color:#fff">Team</h2>
+  <p style="font-size:40px"><b>Pugar Huda Mantoro</b></p>
+  <p class="soft">Built pdk, the Portaldot Dev Kit: 1st place, Portaldot Online Mini Hackathon S1, Builder Tools. Published on PyPI and npm.</p>
+  <p class="soft">Kurs is open source under MIT: github.com/PugarHuda/kurs</p>
+  <div style="margin-top:auto"><span class="led" style="font-size:90px">Kurs</span></div>
+  <span class="n">11</span>
+</section>
+
+</body>
+</html>
