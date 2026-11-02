@@ -59,30 +59,57 @@ async function assetDecimals(id: string): Promise<number> {
   return d;
 }
 
+async function substrate(method: string, params: unknown[]): Promise<any> {
+  const r = await getJson(PORTALDOT_RPC, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  if (r.error) throw new Error(`${method}: ${r.error.message}`);
+  return r.result;
+}
+
+function readU128(le: Buffer, at = 0): bigint {
+  return le.readBigUInt64LE(at) + (le.readBigUInt64LE(at + 8) << 64n);
+}
+
+/** Blocks between samples (6 s blocks: 50 blocks = 5 min) and how many samples. */
+const SAMPLE_STEP = 50;
+const SAMPLES = 5;
 /**
- * Marginal price of 1 unit of `base` in `quote` from pallet-asset-conversion,
- * read with the runtime API (state_call), no fee: "native:7777" = tPOT in pUSD.
+ * Ignore a pool whose quote-side reserve is below this many whole units.
+ * ponytail: 100 fits the V3 testnet pool (~127 pUSD); raise it for mainnet.
+ */
+const MIN_QUOTE_RESERVE = Number(process.env.KURS_MIN_POOL_RESERVE ?? 100);
+
+/**
+ * Price of 1 `base` in `quote` from pallet-asset-conversion, read with the
+ * runtime API (state_call). A single spot read can be pushed around by one
+ * swap, so this takes the median of SAMPLES reads spaced SAMPLE_STEP blocks
+ * apart (a ~20 minute window) and refuses thin pools.
  */
 export async function portaldotQuote(spec: string): Promise<number> {
   const [base, quote] = spec.split(":");
   const [bd, qd] = await Promise.all([assetDecimals(base), assetDecimals(quote)]);
-  const amount = 10n ** BigInt(bd);
-  const params = "0x" + encodeAsset(base) + encodeAsset(quote) + u128le(amount) + "00";
-  const r = await getJson(PORTALDOT_RPC, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "state_call",
-      params: ["AssetConversionApi_quote_price_exact_tokens_for_tokens", params],
+  const pair = encodeAsset(base) + encodeAsset(quote);
+
+  const reserves: string = await substrate("state_call", ["AssetConversionApi_get_reserves", "0x" + pair]);
+  if (!reserves.startsWith("0x01")) throw new Error(`no pool for ${spec}`);
+  const quoteReserve = readU128(Buffer.from(reserves.slice(4 + 32, 4 + 64), "hex"));
+  if (quoteReserve < BigInt(MIN_QUOTE_RESERVE) * 10n ** BigInt(qd)) throw new Error(`pool too thin for ${spec}`);
+
+  const head = parseInt((await substrate("chain_getHeader", [])).number, 16);
+  const call = "0x" + pair + u128le(10n ** BigInt(bd)) + "00"; // include_fee = false
+  const prices = await Promise.all(
+    Array.from({ length: SAMPLES }, async (_, i) => {
+      const hash: string = await substrate("chain_getBlockHash", [head - i * SAMPLE_STEP]);
+      const hex: string = await substrate("state_call", ["AssetConversionApi_quote_price_exact_tokens_for_tokens", call, hash]);
+      if (!hex.startsWith("0x01")) throw new Error(`no quote for ${spec} at #${head - i * SAMPLE_STEP}`);
+      return Number(readU128(Buffer.from(hex.slice(4, 36), "hex"))) / 10 ** qd;
     }),
-  });
-  const hex: string = r.result ?? "";
-  if (!hex.startsWith("0x01") || hex.length < 4 + 32) throw new Error(`no pool quote for ${spec}`);
-  const le = Buffer.from(hex.slice(4, 36), "hex");
-  const out = le.readBigUInt64LE(0) + (le.readBigUInt64LE(8) << 64n);
-  return Number(out) / 10 ** qd;
+  );
+  prices.sort((a, b) => a - b);
+  return prices[SAMPLES >> 1];
 }
 
 // ---------------------------------------------------------------- registry

@@ -11,7 +11,7 @@ import {
 } from "viem";
 import { kursFactoryAbi, kursFactoryBytecode, kursOracleAbi, kursOracleBytecode } from "./abi.js";
 import { FEEDS, feedId, type FeedConfig } from "./feeds.js";
-import { CHAINS, type ChainKey, type SignedObservation } from "./kurs.js";
+import { CHAINS, selectBundle, type ChainKey, type SignedObservation } from "./kurs.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const deploymentPath = (chain: ChainKey) => resolve(ROOT, "deployments", `${chain}.json`);
@@ -181,13 +181,19 @@ export async function transmit(
   if (!d) throw new Error(`no deployment for ${chain}`);
   const { pub, wallet } = clients(chain, transmitter);
   if (!wallet) throw new Error("no wallet");
-  const quorum = await pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "quorum" });
+  const [quorum, reporters] = await Promise.all([
+    pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "quorum" }),
+    pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "reporters" }),
+  ]);
   const now = Math.floor(Date.now() / 1000);
   const results: TransmitResult[] = [];
 
   for (const f of feeds) {
     const id = feedId(f.pair);
-    const obs = observations.filter((o) => o.feedId === id);
+    const obs = await selectBundle(
+      observations.filter((o) => o.feedId === id),
+      reporters,
+    );
     const roundId = obs[0]?.roundId ?? 0n;
     const base = { chain, pair: f.pair, roundId };
     if (obs.length < quorum) {

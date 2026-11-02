@@ -140,6 +140,8 @@ export const FEEDS: FeedConfig[] = [
   ),
   // Native Portaldot price: tPOT quoted in pUSD by the runtime's own DEX
   // (pallet-asset-conversion). This is the feed Kurs exports to other chains.
+  // One AMM is one source: it is sampled over ~20 min of blocks, thin pools
+  // are refused, and the 50% bounds stop a pushed pool from jumping the feed.
   {
     pair: "tPOT/pUSD",
     description: "tPOT / pUSD (Portaldot AssetConversion)",
@@ -147,8 +149,8 @@ export const FEEDS: FeedConfig[] = [
     heartbeat: 3600,
     deviationBps: 100,
     maxSpreadBps: 100,
-    minAnswer: 1n,
-    maxAnswer: d8(1_000_000),
+    minAnswer: d8(0.1),
+    maxAnswer: d8(10),
     minSources: 1,
     sources: { "portaldot-assetconversion": "native:7777" },
   },

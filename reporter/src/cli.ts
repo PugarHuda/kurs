@@ -33,6 +33,12 @@ async function collect(): Promise<SignedObservation[]> {
   const readings = await readAll();
   const local = (await Promise.all(localReporters().map((a) => observeAndSign(a, readings)))).flat();
   const urls = (env("KURS_REPORTER_URLS") ?? "").split(",").filter(Boolean);
+  for (const u of urls) {
+    const { protocol, hostname } = new URL(u);
+    if (protocol !== "https:" && hostname !== "localhost" && hostname !== "127.0.0.1") {
+      throw new Error(`reporter URL must be https: ${u}`);
+    }
+  }
   const remote = (
     await Promise.all(
       urls.map(async (u) => {

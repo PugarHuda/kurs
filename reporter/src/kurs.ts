@@ -1,4 +1,4 @@
-import { defineChain, type Hex, type LocalAccount, type Address } from "viem";
+import { defineChain, recoverTypedDataAddress, type Hex, type LocalAccount, type Address } from "viem";
 import { foundry, sepolia } from "viem/chains";
 import { FEEDS, feedId, type FeedConfig, type SourceId } from "./feeds.js";
 import { SOURCES } from "./sources.js";
@@ -150,3 +150,35 @@ export const fromJson = (o: ReturnType<typeof toJson>): SignedObservation => ({
   answer: BigInt(o.answer),
   observedAt: BigInt(o.observedAt),
 });
+
+/**
+ * Keeps only observations the contract would accept, so one bad remote
+ * reporter cannot make a whole bundle revert: signature recovers to the
+ * claimed reporter, reporter is in the on-chain set, one per reporter,
+ * all on the most common roundId, at most 31.
+ */
+export async function selectBundle(obs: SignedObservation[], allowed: readonly Address[]): Promise<SignedObservation[]> {
+  const allow = new Set(allowed.map((a) => a.toLowerCase()));
+  const valid: SignedObservation[] = [];
+  for (const o of obs) {
+    try {
+      const signer = await recoverTypedDataAddress({
+        domain: DOMAIN,
+        types: TYPES,
+        primaryType: "Observation",
+        message: { feedId: o.feedId, roundId: o.roundId, answer: o.answer, observedAt: o.observedAt },
+        signature: `${o.r}${o.s.slice(2)}${o.v.toString(16).padStart(2, "0")}` as Hex,
+      });
+      if (signer.toLowerCase() === o.reporter.toLowerCase() && allow.has(signer.toLowerCase())) valid.push(o);
+    } catch {
+      // malformed signature: drop it
+    }
+  }
+  const votes = new Map<bigint, number>();
+  for (const o of valid) votes.set(o.roundId, (votes.get(o.roundId) ?? 0) + 1);
+  const round = [...votes.entries()].sort((a, b) => b[1] - a[1] || (b[0] > a[0] ? 1 : -1))[0]?.[0];
+  const seen = new Set<string>();
+  return valid
+    .filter((o) => o.roundId === round && !seen.has(o.reporter.toLowerCase()) && seen.add(o.reporter.toLowerCase()))
+    .slice(0, 31);
+}

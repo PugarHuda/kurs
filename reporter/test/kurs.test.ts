@@ -82,3 +82,23 @@ describe("feed config", () => {
     expect(ids.size).toBe(FEEDS.length);
   });
 });
+
+describe("selectBundle", () => {
+  const reps = [1, 2, 3].map((i) => privateKeyToAccount(`0x${(i + 10).toString(16).padStart(64, "0")}`));
+  const outsider = privateKeyToAccount(`0x${"77".repeat(32)}`);
+
+  it("drops forged, outsider, duplicate and off-round observations", async () => {
+    const { selectBundle } = await import("../src/kurs.js");
+    const good = await Promise.all(reps.map((r) => sign(r, "ETH/USD", 9n, 100n, 1n)));
+    const dup = await sign(reps[0], "ETH/USD", 9n, 101n, 1n);
+    const out = await sign(outsider, "ETH/USD", 9n, 100n, 1n);
+    const offRound = await sign(reps[1], "ETH/USD", 8n, 100n, 1n);
+    const forged = { ...good[2], answer: 999n }; // signature no longer matches
+    const picked = await selectBundle(
+      [dup, ...good.slice(0, 2), out, offRound, forged],
+      reps.map((r) => r.address),
+    );
+    expect(picked.map((o) => o.reporter)).toEqual([reps[0].address, reps[1].address]);
+    expect(picked.every((o) => o.roundId === 9n)).toBe(true);
+  });
+});
