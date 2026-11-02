@@ -9,7 +9,8 @@
     "run": "tsx src/cli.ts run",
     "once": "tsx src/cli.ts once",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "evidence": "node evidence.mjs"
   },
   "engines": {
     "node": ">=22"
