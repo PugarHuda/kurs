@@ -65,7 +65,7 @@ await scene("s2", () => slide(2));
 
 // 3: live rate board on Sepolia
 await scene("s3", async () => {
-  await page.goto(`${SITE}/?net=sepolia&feed=USD%2FIDR`, { waitUntil: "load" });
+  await page.goto(`${SITE}/?net=portaldot&feed=USD%2FIDR`, { waitUntil: "load" });
   await page.locator("#board-body tr[data-pair]").nth(10).waitFor({ timeout: 60_000 });
   await page.locator("#board-body tr[data-pair]").first().locator("td.led").waitFor();
 });

@@ -2,14 +2,41 @@
   "voice": "en-US-AndrewNeural",
   "rate": "+0%",
   "segments": [
-    {"key": "s1", "text": "This is Kurs. Kurs is Indonesian for exchange rate. It brings signed price feeds to Portaldot V3, readable from Solidity and from ink!, and portable to any EVM chain."},
-    {"key": "s2", "text": "Portaldot already has money apps, but none of them can read a price. On the live V3 testnet, the Oracle pallet holds no values and has no operators, and no oracle is exposed to EVM contracts."},
-    {"key": "s3", "text": "This is the Kurs rate board, read straight from public RPCs in the browser. Five reporters read exchanges, aggregators, Chainlink and Portaldot's own pools. Each signs its own number, and the contract stores the median once a majority agrees."},
-    {"key": "s4", "text": "You don't have to trust this page. For the selected feed it fetches the transaction, decodes every signed observation, recovers each signer in your browser, and recomputes the median."},
-    {"key": "s5", "text": "Why this matters: routed through Portaldot's own pools, a tokenised Tesla share is worth about four cents. Kurs says about four hundred and ten dollars. A lending market priced from those pools could be drained."},
-    {"key": "s6", "text": "Kurs also works pull style, with ERC 7412. This converter only accepts a fresh price. When the stored price is stale, the client fetches a signed bundle and submits it with the call. On Sepolia that is one transaction."},
-    {"key": "s7", "text": "ink! contracts read the same oracle. On pallet revive, the KursRemit ink! version six contract calls the Solidity oracle through its ABI, and gets exactly the same round."},
-    {"key": "s8", "text": "Kurs is built for Revive's storage deposits, with a ring buffer and forty five byte clones, and it ships with sixty one automated tests. Because signatures carry no chain id, the tPOT price from Portaldot's own DEX is already live on Ethereum."},
-    {"key": "s9", "text": "Kurs. Signed prices for Portaldot, for both virtual machines, on every chain. It is open source at github dot com slash PugarHuda slash kurs."}
+    {
+      "key": "s1",
+      "text": "This is Kurs. Kurs is Indonesian for exchange rate. It brings signed price feeds to Portaldot V3, readable from Solidity and from ink!, and portable to any EVM chain."
+    },
+    {
+      "key": "s2",
+      "text": "Portaldot already has money apps, but none of them can read a price. On the live V3 testnet, the Oracle pallet holds no values and has no operators, and no oracle is exposed to EVM contracts."
+    },
+    {
+      "key": "s3",
+      "text": "This is the Kurs rate board, live on Portaldot V3 and read straight from public RPCs in the browser. Five reporters read exchanges, aggregators, Chainlink and Portaldot's own pools. Each signs its own number, and the contract stores the median once a majority agrees."
+    },
+    {
+      "key": "s4",
+      "text": "You don't have to trust this page. For the selected feed it fetches the transaction, decodes every signed observation, recovers each signer in your browser, and recomputes the median."
+    },
+    {
+      "key": "s5",
+      "text": "Why this matters: routed through Portaldot's own pools, a tokenised Tesla share is worth about four cents. Kurs says about four hundred and ten dollars. A lending market priced from those pools could be drained."
+    },
+    {
+      "key": "s6",
+      "text": "Kurs also works pull style, with ERC 7412. This converter only accepts a fresh price. When the stored price is stale, the client fetches a signed bundle and submits it with the call. On Sepolia that is one transaction."
+    },
+    {
+      "key": "s7",
+      "text": "ink! contracts read the same oracle. On pallet revive, the KursRemit ink! version six contract calls the Solidity oracle through its ABI, and gets exactly the same round."
+    },
+    {
+      "key": "s8",
+      "text": "Kurs is built for Revive's storage deposits: we measured opening a storage slot at eight tPOT and overwriting one at a tenth, so every Portaldot round reuses its slot. The identical signed bundle is then relayed to Ethereum, and sixty four automated tests cover it all."
+    },
+    {
+      "key": "s9",
+      "text": "Kurs. Signed prices for Portaldot, for both virtual machines, on every chain. It is open source at github dot com slash PugarHuda slash kurs."
+    }
   ]
 }
