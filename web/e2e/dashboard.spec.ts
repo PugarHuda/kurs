@@ -98,3 +98,10 @@ test("Portaldot V3: live rounds, verified in the browser, linked to the Node Con
   await expect(page.locator(".facts a").first()).toHaveAttribute("href", /node-console\.portaldot\.dev\/.*#\/explorer\/query\/\d+/);
   await expect(page.locator("#parity table tbody tr")).toHaveCount(2);
 });
+
+test("governance panel reads the owner: native multisig on Portaldot, a key on Sepolia", async ({ page }) => {
+  await page.goto("/?net=portaldot");
+  await expect(page.locator("#gov")).toContainText("native Portaldot 2-of-3 multisig", { timeout: 45_000 });
+  await page.getByRole("button", { name: "Ethereum Sepolia" }).click();
+  await expect(page.locator("#gov")).toContainText("single deployer key", { timeout: 45_000 });
+});

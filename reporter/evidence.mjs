@@ -46,6 +46,19 @@ for (const d of deployments) {
   md += `| KursAggregatorFactory | ${cell(n.addr(d.factory), d.factory)} |\n`;
   if (d.converter) md += `| KursConverter (ERC-7412 pull consumer, USD/IDR) | ${cell(n.addr(d.converter), d.converter)} |\n`;
   if (d.kursRemit) md += `| KursRemit (ink! v6) | ${cell(n.addr(d.kursRemit), d.kursRemit)} |\n`;
+  const owner = await c.readContract({ address: d.oracle, abi: oracleAbi, functionName: "owner" }).catch(() => null);
+  if (d.governance) {
+    const g = d.governance;
+    const isMs = owner && owner.toLowerCase() === g.h160.toLowerCase();
+    const block = (h) => `https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/${h}`;
+    md += `\n### Governance: ${g.type}\n\n`;
+    md += `\`owner()\` read live: \`${owner}\` ${isMs ? "**= the multisig account**" : "(not the multisig)"}. `;
+    md += `Changing feeds, reporters or ownership needs ${g.threshold} of ${g.signatories.length} Substrate signers: ${g.signatories.map((s) => `\`${s}\``).join(", ")}. `;
+    md += `Multisig account \`${g.account}\`, its Revive address \`${g.h160}\`.\n\n| Step | Extrinsic |\n|---|---|\n`;
+    for (const [what, t] of Object.entries(g.substrateTxs)) md += `| ${what} | ${t.block ? `[\`${short(t.hash)}\`](${block(t.block)})` : `\`${short(t.hash)}\``} |\n`;
+  } else if (owner) {
+    md += `\n\`owner()\`: \`${owner}\`\n`;
+  }
   md += `\nReporters (quorum ${d.quorum} of ${d.reporters.length}): ${d.reporters.map((r) => `${cell(n.addr(r), short(r))}`).join(", ")}\n\n`;
 
   md += `### Feeds and latest round\n\n| Feed | AggregatorV3 clone | Latest round | Answer | Updated (UTC) |\n|---|---|---|---|---|\n`;

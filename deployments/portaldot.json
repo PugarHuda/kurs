@@ -50,8 +50,34 @@
     "setFeed tPOT/pUSD": "0x425066da2925d244a7e60b2b6c344346dcfc2685334171039d70fed52404ae0e",
     "aggregator tPOT/pUSD": "0xccb45697eb42e14569cc2ee92e381d934ca67476b7a624d11c323711a3e458f8",
     "deployConverter": "0x3279416fa9ba3dada716ff79f21810f71dbd3eb2c682e291073031bb8cea08ed",
-    "KursConverter.convert(10000) at a fresh price (USD 100 -> IDR 1,814,489.94)": "0x8e7d003a8c4c5a5828d44e454fd98bc71e24cabf952b406332cef7f0afa736b7"
+    "KursConverter.convert(10000) at a fresh price (USD 100 -> IDR 1,814,489.94)": "0x8e7d003a8c4c5a5828d44e454fd98bc71e24cabf952b406332cef7f0afa736b7",
+    "transferOwnership(multisig H160)": "0xbcc817dbd124fe88e6ea6cca567a89fb8881ecc95810be1c0f3351bd162d0670",
+    "fund signer A (EVM value transfer to mapped H160)": "0x5469afe29977a76e89ca178eec9ea8d8ea677d0c1a5e9052e2d54f75e9b88cfb"
   },
   "deployedAt": "2026-11-03T01:38:01.102Z",
-  "converter": "0xbfc639efc469056d9d4dcd8d4215060bae1fd676"
+  "converter": "0xbfc639efc469056d9d4dcd8d4215060bae1fd676",
+  "governance": {
+    "type": "pallet-multisig (native Portaldot)",
+    "threshold": 2,
+    "signatories": [
+      "5DFGxAY1oHsiUZLpo5bpGgeAUtHvCsJf8wmk6xpR7b9oRZUd",
+      "5GL6P3cev9hxyo5jYwHeV5ddC6Mp1W46acvuNUqdardjeLm1",
+      "5GazSSd6y3kTKfDFv3ntmDQUKsDPqxXjpcQF8Pov1BjDdzR5"
+    ],
+    "account": "5EJwTgmFNcafDaMhVEiVZv11wpeWFdNtLTyAMsiHCFFXzPBk",
+    "h160": "0x03b95fa716f8b73e174b70c2c6facebb079fe10b",
+    "substrateTxs": {
+      "fund multisig (balances.transferKeepAlive)": {
+        "hash": "0x9dd892ae139a79197e7245abb75b6fa95949199737baa37e7a6bf57fb8db4309"
+      },
+      "approve (multisig.asMulti by A)": {
+        "hash": "0xf2b9464539d450e54e45df2f879bd628bc76020a36a4a040c8be9b91ac8ff9f2",
+        "block": "0x9fcbc4ba10001f04cfaa1971749b6da509d6c768fbd4e02f9339bc119623caa4"
+      },
+      "execute batchAll[revive.mapAccount, revive.call(acceptOwnership)] (multisig.asMulti by B)": {
+        "hash": "0x9c057bc8d2ad4aa2cd525e689e78fb8a0de09de36d59caff292fedd6a933137a",
+        "block": "0xd5b2ab8d73aaa5d3ac07207d8ea3834398faec20f6ee8efb8863acac18e6050c"
+      }
+    }
+  }
 }

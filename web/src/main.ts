@@ -8,6 +8,7 @@ import {
   DEPLOYMENTS,
   NETWORKS,
   oracleOperatorCount,
+  ownerOf,
   poolPrice,
   snapshot,
   type Deployment,
@@ -343,12 +344,30 @@ async function renderPools(s: Snapshot) {
 
 // ------------------------------------------------------------------ boot
 
+async function renderGovernance(d: Deployment) {
+  const el = document.querySelector<HTMLElement>("#gov");
+  if (!el) return;
+  try {
+    const owner = await ownerOf(d);
+    const g = d.governance;
+    if (g && owner.toLowerCase() === g.h160.toLowerCase()) {
+      el.innerHTML = `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is a <strong>native Portaldot ${g.threshold}-of-${g.signatories.length} multisig</strong> (pallet-multisig), not a single key. Changing feeds, reporters or ownership takes ${g.threshold} Substrate signatures, executed into the EVM contract through <code>revive.call</code>.</p>
+        <p class="muted">Multisig <code>${esc(short(g.account))}</code>, Revive address <code>${esc(short(g.h160))}</code>.</p>`;
+    } else {
+      el.innerHTML = `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is <code>${esc(short(owner))}</code>, a single deployer key.</p>`;
+    }
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Could not read the owner: ${esc((e as Error).message.split("\n")[0])}.</p>`;
+  }
+}
+
 async function refresh() {
   if (!current) return;
   try {
     last = await snapshot(current);
     renderBoard(last);
     renderDetail(last);
+    void renderGovernance(current);
     $("#status").textContent = "";
   } catch (e) {
     $("#status").textContent = `Could not reach ${NETWORKS[current.chain].label}: ${(e as Error).message.split("\n")[0]}. Retrying.`;

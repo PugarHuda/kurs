@@ -13,6 +13,7 @@ export interface Deployment {
   reporters: Address[];
   quorum: number;
   txs: Record<string, Hex>;
+  governance?: { type: string; threshold: number; signatories: string[]; account: string; h160: Address };
 }
 
 const files = import.meta.glob<Deployment>("../../deployments/*.json", { eager: true, import: "default" });
@@ -168,4 +169,9 @@ export async function oracleOperatorCount(): Promise<number> {
   if (!v || v === "0x00") return 0;
   // SCALE compact length prefix, single-byte mode is enough for a members list
   return parseInt(v.slice(2, 4), 16) >> 2;
+}
+
+/** The oracle's current owner, read from the contract. */
+export async function ownerOf(d: Deployment): Promise<Address> {
+  return clientFor(d).readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "owner" });
 }
