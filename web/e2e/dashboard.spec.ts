@@ -149,6 +149,26 @@ test("/api/substrate reads every feed through ReviveApi_call and agrees with the
   for (const f of body.feeds) expect(Number(f.answer)).toBeGreaterThan(0);
 });
 
+test("/api/mcp is an MCP server whose tools return on-chain prices", async ({ request }) => {
+  const rpc = async (method: string, params: object = {}) => {
+    const r = await request.post("/api/mcp", {
+      headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2025-06-18" },
+      data: { jsonrpc: "2.0", id: 1, method, params },
+      timeout: 90_000,
+    });
+    expect(r.status(), method).toBe(200);
+    return (await r.json()).result;
+  };
+  const init = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "e2e", version: "1" } });
+  expect(init.serverInfo.name).toBe("kurs");
+  const { tools } = await rpc("tools/list");
+  expect(tools.map((t: { name: string }) => t.name).sort()).toEqual(["convert", "get_history", "get_price", "get_signed_bundle", "list_feeds"]);
+  const price = JSON.parse((await rpc("tools/call", { name: "get_price", arguments: { pair: "USD/IDR", network: "sepolia" } })).content[0].text);
+  expect(price.price).toBeGreaterThan(10_000);
+  const conv = JSON.parse((await rpc("tools/call", { name: "convert", arguments: { amount: 100, from: "USD", to: "IDR", network: "sepolia" } })).content[0].text);
+  expect(conv.result).toBeCloseTo(100 * price.price, 0);
+});
+
 test("the dashboard is in English (no Indonesian UI copy)", async ({ page }) => {
   await page.goto("/?net=portaldot");
   await expect(page.locator("#board-title")).toHaveText(/Today's rates/);

@@ -56,27 +56,45 @@ const payloadParams = [
   },
 ] as const;
 
-/** Pull the (feedId, roundId, observations) out of transmit, fulfillOracleQuery or a Multicall3 batch. */
-function extract(oracle: Address, to: Address | null, input: Hex): { path: string; feedId: Hex; roundId: bigint; obs: readonly Obs[] } {
+const pythAbi = parseAbi(["function updatePriceFeeds(bytes[] updateData) payable"]);
+
+type Found = { path: string; feedId: Hex; roundId: bigint; obs: readonly Obs[] };
+
+/** Every (feedId, roundId, observations) in a transaction that lands Kurs rounds: transmit,
+ * fulfillOracleQuery, a Multicall3 batch of those, or KursPyth.updatePriceFeeds. */
+function extractAll(oracle: Address, to: Address | null, input: Hex): Found[] {
   if (to && to.toLowerCase() === oracle.toLowerCase()) {
     const call = decodeFunctionData({ abi: kursOracleAbi, data: input });
     if (call.functionName === "transmit") {
       const [feedId, roundId, obs] = call.args as [Hex, bigint, readonly Obs[]];
-      return { path: "push: transmit", feedId, roundId, obs };
+      return [{ path: "push: transmit", feedId, roundId, obs }];
     }
     if (call.functionName === "fulfillOracleQuery") {
       const [feedId, roundId, obs] = decodeAbiParameters(payloadParams, (call.args as [Hex])[0]);
-      return { path: "pull: ERC-7412 fulfillOracleQuery", feedId, roundId, obs };
+      return [{ path: "pull: ERC-7412 fulfillOracleQuery", feedId, roundId, obs }];
     }
     throw new Error(`unexpected oracle call ${call.functionName}`);
   }
+  if (input.slice(0, 10) === "0xef9e5e28") {
+    // KursPyth.updatePriceFeeds(bytes[]): each element is a fulfillOracleQuery payload
+    const { args } = decodeFunctionData({ abi: pythAbi, data: input });
+    return args[0].map((u) => {
+      const [feedId, roundId, obs] = decodeAbiParameters(payloadParams, u);
+      return { path: "pull: Pyth updatePriceFeeds via KursPyth", feedId, roundId, obs };
+    });
+  }
   const mc = decodeFunctionData({ abi: multicallAbi, data: input });
-  const inner = (mc.args[0] as readonly { target: Address; callData: Hex }[]).find(
-    (c) => c.target.toLowerCase() === oracle.toLowerCase(),
-  );
-  if (!inner) throw new Error("no oracle call in this multicall");
-  const got = extract(oracle, oracle, inner.callData);
-  return { ...got, path: `${got.path} inside Multicall3` };
+  return (mc.args[0] as readonly { target: Address; callData: Hex }[])
+    .filter((c) => c.target.toLowerCase() === oracle.toLowerCase())
+    .flatMap((c) => extractAll(oracle, oracle, c.callData).map((g) => ({ ...g, path: `${g.path} inside Multicall3` })));
+}
+
+/** The round `want` from the transaction (a batch can carry several feeds), else the first. */
+function extract(oracle: Address, to: Address | null, input: Hex, want?: { feedId: Hex; roundId: bigint }): Found {
+  const all = extractAll(oracle, to, input);
+  const hit = want ? all.find((f) => f.feedId.toLowerCase() === want.feedId.toLowerCase() && f.roundId === want.roundId) : all[0];
+  if (!hit) throw new Error(want ? "this transaction does not carry that round" : "no Kurs round in this transaction");
+  return hit;
 }
 
 export function median(xs: bigint[]): bigint {
@@ -106,9 +124,10 @@ export async function verifyRound(
   oracle: Address,
   txHash: Hex,
   reporters: readonly Address[],
+  want?: { feedId: Hex; roundId: bigint },
 ): Promise<Verification> {
   const tx = await client.getTransaction({ hash: txHash });
-  const { path, feedId, roundId, obs } = extract(oracle, tx.to ?? null, tx.input);
+  const { path, feedId, roundId, obs } = extract(oracle, tx.to ?? null, tx.input, want);
   const observations = await recoverAll(feedId, roundId, obs, reporters);
   return { path, feedId, roundId, observations, median: median(observations.map((o) => o.answer)) };
 }

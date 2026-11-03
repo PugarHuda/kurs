@@ -11,6 +11,9 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
       - run: forge test -vv
         working-directory: contracts
+      # gas regressions: deterministic tests only (fuzz/invariant gas varies by seed)
+      - run: forge snapshot --check --no-match-test 'Fuzz|fuzz|invariant'
+        working-directory: contracts
 
   slither:
     runs-on: ubuntu-latest
@@ -57,3 +60,14 @@ jobs:
         working-directory: web
       - run: npx playwright test
         working-directory: web
+
+  sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # builds the npm package and checks it against the live contracts and API
+      - run: npm ci && npm run build && npm test
+        working-directory: sdk

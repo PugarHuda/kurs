@@ -1,5 +1,6 @@
 import "./style.css";
 import type { Address, Hex } from "viem";
+import { keccak256, toBytes } from "viem";
 import { FEEDS } from "../../reporter/src/feeds";
 import { FEEDS as ALL_FEEDS } from "../../reporter/src/feeds";
 import { verifyBundlePayload, verifyRound, type CheckedObservation } from "./verify";
@@ -229,7 +230,7 @@ async function runVerify(s: Snapshot, f: FeedState, ev: FeedState["history"][num
   const seq = ++verifySeq;
   const el = () => document.querySelector<HTMLElement>("#verify");
   try {
-    const v = await verifyRound(clientFor(s.deployment), s.deployment.oracle, ev.txHash, s.reporters);
+    const v = await verifyRound(clientFor(s.deployment), s.deployment.oracle, ev.txHash, s.reporters, { feedId: keccak256(toBytes(f.feed.pair)), roundId: ev.roundId });
     if (seq !== verifySeq || !el()) return;
     const allIn = v.observations.every((o) => o.isReporter);
     const same = v.median === ev.answer && v.roundId === ev.roundId;

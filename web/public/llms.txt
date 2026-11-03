@@ -1,0 +1,26 @@
+# Kurs
+
+> Signed price feeds for Portaldot V3 (pallet-revive) and Ethereum Sepolia. Five reporters sign each observation (EIP-712); the contract takes the median when a strict majority agrees. Readable from Solidity, ink! and Substrate, and through the Chainlink, Pyth, ERC-7726 and Morpho Blue interfaces.
+
+Feeds: BTC/USD, ETH/USD, DOT/USD, USDT/USD, USD/IDR, TSLA/USD, NVDA/USD, AAPL/USD, AMZN/USD, META/USD, tPOT/pUSD. 8 decimals. feedId = keccak256(pair), e.g. keccak256("USD/IDR").
+
+## HTTP API (no key, CORS open)
+
+- [OpenAPI 3.1 spec](https://kurs-ten-zeta.vercel.app/openapi.json): all endpoints below
+- [/api/feeds](https://kurs-ten-zeta.vercel.app/api/feeds): feed catalogue, ids, sources, AggregatorV3 addresses
+- [/api/bundle?pair=USD/IDR](https://kurs-ten-zeta.vercel.app/api/bundle?pair=USD/IDR): freshly signed bundle; `payload` goes to KursOracle.fulfillOracleQuery (ERC-7412) or KursPyth.updatePriceFeeds
+- [/api/health](https://kurs-ten-zeta.vercel.app/api/health): age of every feed on every network
+- [/api/history?net=portaldot&pair=USD/IDR](https://kurs-ten-zeta.vercel.app/api/history?net=portaldot&pair=USD/IDR): every round since deployment
+- [/api/substrate](https://kurs-ten-zeta.vercel.app/api/substrate): Portaldot prices read through the Substrate runtime API ReviveApi_call
+- [/api/mcp](https://kurs-ten-zeta.vercel.app/api/mcp): Model Context Protocol server (Streamable HTTP) with tools to list feeds, read prices, convert amounts and fetch history
+
+## Contracts
+
+- Portaldot V3 testnet (chain id 420420777, RPC https://test-evm-rpc-v3.portaldot.dev): KursOracle 0x5bdd9713ddc4f11e14bd3094882401cd122656f4
+- Sepolia: KursOracle 0xd3f6bf8e595e815de11598f23170b37341a2cbc3, KursQuoteOracle (ERC-7726) 0x787e4f515d1affa6a3dff10ee953f236db90cf30, KursPyth (IPyth) 0x22cd6de783b69a2742a389c037dbe77999fabaa7, KursMorphoOracle (BTC/IDR) 0xdcdc450ff50f0925e3b9ca5b83db92e7614026e5
+
+## Docs
+
+- [README](https://github.com/PugarHuda/kurs#readme): design, ways to read Kurs, governance
+- [Evidence](https://github.com/PugarHuda/kurs/blob/main/docs/evidence.md): every address and transaction, with live reads
+- [Security](https://github.com/PugarHuda/kurs/blob/main/docs/security.md): static-analysis triage, invariants, proofs
