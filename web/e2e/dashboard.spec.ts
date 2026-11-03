@@ -148,3 +148,9 @@ test("/api/substrate reads every feed through ReviveApi_call and agrees with the
   expect(body.feeds).toHaveLength(11);
   for (const f of body.feeds) expect(Number(f.answer)).toBeGreaterThan(0);
 });
+
+test("the dashboard is in English (no Indonesian UI copy)", async ({ page }) => {
+  await page.goto("/?net=portaldot");
+  await expect(page.locator("#board-title")).toHaveText(/Today's rates/);
+  await expect(page.locator("body")).not.toContainText(/hari ini|terakhir|sumber/i);
+});

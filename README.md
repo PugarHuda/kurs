@@ -82,7 +82,7 @@ reporter/           sources, signing, bundle selection, transmit, deploy (CLI: k
   src/sources.ts              fetchers incl. Chainlink-on-Sepolia and AssetConversion
   src/kurs.ts                 EIP-712 signing, median, off-chain bundle checks
   src/chain.ts                deploy / configure / transmit
-web/                dashboard ("Kurs hari ini" rate board)
+web/                dashboard ("Today's rates" board)
 deployments/        addresses + tx hashes written by `kurs deploy`
 docs/               architecture diagram, evidence of on-chain activity
 ```
