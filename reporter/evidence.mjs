@@ -41,6 +41,7 @@ for (const d of deployments) {
   md += `| Contract | Address |\n|---|---|\n`;
   md += `| KursOracle | [\`${d.oracle}\`](${n.addr(d.oracle)}) |\n`;
   md += `| KursAggregatorFactory | [\`${d.factory}\`](${n.addr(d.factory)}) |\n`;
+  if (d.converter) md += `| KursConverter (ERC-7412 pull consumer, USD/IDR) | [\`${d.converter}\`](${n.addr(d.converter)}) |\n`;
   if (d.kursRemit) md += `| KursRemit (ink! v6) | [\`${d.kursRemit}\`](${n.addr(d.kursRemit)}) |\n`;
   md += `\nReporters (quorum ${d.quorum} of ${d.reporters.length}): ${d.reporters.map((r) => `[\`${short(r)}\`](${n.addr(r)})`).join(", ")}\n\n`;
 
@@ -78,7 +79,12 @@ md += `## Source verification
 Sepolia contracts are verified on Sourcify with an exact match:
 ${deployments
   .filter((d) => d.chain === "sepolia")
-  .map((d) => `- https://repo.sourcify.dev/contracts/full_match/11155111/${d.oracle}/\n- https://repo.sourcify.dev/contracts/full_match/11155111/${d.factory}/`)
+  .map((d) =>
+    [d.oracle, d.factory, d.converter]
+      .filter(Boolean)
+      .map((a) => `- https://repo.sourcify.dev/contracts/full_match/11155111/${a}/`)
+      .join("\n"),
+  )
   .join("\n")}
 
 To check any deployment yourself: \`cd contracts && forge build\`, then compare \`out/KursOracle.sol/KursOracle.json\` deployedBytecode with \`eth_getCode\` at the oracle address (immutables differ only in DOMAIN_SEPARATOR).

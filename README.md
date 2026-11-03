@@ -10,7 +10,7 @@ Portaldot Hacker House 2026 · Track: **Multi-Chain & Cross-Chain Infra**
 
 | Network | KursOracle | Status |
 |---|---|---|
-| Ethereum Sepolia | [`0x5bdd9713…6656f4`](https://sepolia.etherscan.io/address/0x5bdd9713ddc4f11e14bd3094882401cd122656f4) | live, 11 feeds, source verified on Sourcify (exact match) |
+| Ethereum Sepolia | [`0xd3f6bf8e…a2cbc3`](https://sepolia.etherscan.io/address/0xd3f6bf8e595e815de11598f23170b37341a2cbc3) | live: 11 feeds pushed by the relay, ERC-7412 pull used on chain, oracle + factory + converter verified on Sourcify (exact match) |
 | Portaldot V3 testnet | see [`deployments/`](deployments/) | deploying: waiting on testnet tPOT for Revive storage deposits (about 1,900 tPOT) |
 
 ![Kurs architecture](docs/architecture.png)
@@ -41,7 +41,8 @@ Kurs is a signed-observation oracle built for Portaldot's dual VM:
 2. **Anyone can transmit** a bundle of signatures. The transmitter is not trusted. The contract checks every signature.
 3. **`KursOracle`** (Solidity on pallet-revive) requires a strict-majority quorum of distinct reporters, rejects stale or future timestamps and out-of-bounds values, **reverts when reporters disagree** by more than the feed's spread limit, and stores the **on-chain median**. A minority of dishonest reporters cannot move it.
 4. **Solidity** consumers read it through the unchanged **Chainlink `AggregatorV3Interface`** (one 45-byte clone per feed). **ink!** consumers call the same contract through a Solidity-ABI cross-contract call: `KursRemit` (ink! v6, PolkaVM) reads `KursOracle` (EVM bytecode) inside the same pallet.
-5. The signature domain carries **no chainId**, so **the same signed round settles to the same answer on any EVM chain** running Kurs. The tPOT price measured on Portaldot's own DEX can be exported to Ethereum, and ETH or BTC prices can be imported, with one set of signatures.
+5. **Push and pull.** A relayer pushes rounds when the price moves or a heartbeat expires. A consumer that needs a fresher price than what is stored can **pull** one into its own transaction through **ERC-7412** (the pull-oracle interface used by RedStone and Synthetix): `latestRoundFresh` reverts `OracleDataRequired`, the client fetches a signed bundle (from the bundle API or its own reporters) and sends `fulfillOracleQuery` + its call together through Multicall3. [First pull on Sepolia, one transaction.](https://sepolia.etherscan.io/tx/0x9e2aa23575734bba9b24b2ea6d25e9fc414a9b18cf2c3f64e323c3e9b17c405f)
+6. The signature domain carries **no chainId**, so **the same signed round settles to the same answer on any EVM chain** running Kurs. The tPOT price measured on Portaldot's own DEX can be exported to Ethereum, and ETH or BTC prices can be imported, with one set of signatures.
 
 ### Why it needs Portaldot
 
@@ -92,10 +93,14 @@ docs/               architecture diagram, evidence of on-chain activity
 | `latestRound(feedId)` | `(roundId, answer, observedAt, updatedAt)` |
 | `getRound(feedId, roundId)` | Any of the last 64 rounds; empty if overwritten |
 | `observationDigest(...)` | The EIP-712 digest a reporter signs |
+| `oracleId()`, `fulfillOracleQuery(bytes)` | ERC-7412. `fulfillOracleQuery` takes `abi.encode(feedId, roundId, Observation[])`, runs every check `transmit` runs, and is idempotent (returns if that round or a newer one is stored), so batched consumer calls never trip over each other. |
+| `latestRoundFresh(feedId, maxAge)` | Latest round, or ERC-7412 `OracleDataRequired(oracle, abi.encode(feedId, maxAge))` when the newest observation is older than `maxAge`. |
 | `setReporters`, `setFeed`, `setMaxObservationAge` | Owner only. Quorum must be a strict majority. |
 | `transferOwnership` / `acceptOwnership` | Two-step |
 
 **`KursAggregatorFactory` / `KursAggregatorV3`**: `deploy(feedId)` creates a 45-byte EIP-1167 clone exposing `latestRoundData`, `getRoundData`, `decimals`, `description`, `version`.
+
+**`KursConverter`**: a real pull consumer. `convert(amount)` multiplies by a USD/IDR price no older than `maxAge` (300 s on Sepolia), so it only works when the caller pulls a fresh bundle or the relay has just pushed one.
 
 **`KursRemit` (ink! v6)**: `latest()`, `quote(amount)`, `quote_and_log(amount)` (emits `Quoted`), refuses prices older than `max_age`.
 
@@ -157,6 +162,19 @@ REPORTER_PK=0x... PORT=8787 npx tsx src/cli.ts serve
 KURS_REPORTER_URLS=https://reporter-a.example,https://reporter-b.example npx tsx src/cli.ts run
 ```
 
+### Pull a fresh price (ERC-7412)
+
+```bash
+# signed bundle from the hosted API (or omit KURS_BUNDLE_URL to sign with local reporter keys)
+KURS_BUNDLE_URL=https://kurs-ten-zeta.vercel.app npx tsx src/cli.ts pull-convert 10000 sepolia
+```
+
+It simulates `KursConverter.convert`, catches `OracleDataRequired`, fetches the bundle, and sends `Multicall3.aggregate3([fulfillOracleQuery, convert])`. On a chain without Multicall3 (Portaldot V3 today) it sends the two calls in order. The bundle API is `GET /api/bundle?pair=USD/IDR` on the dashboard host; `GET /api/feeds` lists feeds and addresses.
+
+### Hosted parts
+
+`bash scripts/set-secrets.sh` puts the testnet reporter keys on Vercel (for `/api/bundle`) and in GitHub Actions secrets (for `.github/workflows/relay.yml`, a push round every 10 minutes).
+
 ### ink! consumer
 
 ```bash
@@ -184,12 +202,17 @@ Contract addresses, every transaction hash, and the reporter set are in [`deploy
 
 Measured on V3 before deploying: `eth_estimateGas` for `KursOracle` comes to about 711 tPOT, almost all of it the code storage deposit (0.06 tPOT per byte plus a 30% code-hash lockup). The ink! contract (11.6 KB of PolkaVM code) is about 900 tPOT. These deposits are refundable when code is removed.
 
+## Verify it yourself
+
+The dashboard does not ask you to trust it. For the selected feed it fetches the latest round's transaction, decodes the signed observations from the calldata (a `transmit`, a `fulfillOracleQuery`, or either inside Multicall3), recovers every signer with EIP-712 in your browser, checks each one against the reporter set read from the contract, and recomputes the median. The pull panel does the same for a bundle before you use it.
+
 ## Testing
 
 | Suite | Count | Command |
 |---|---|---|
-| Solidity (Foundry, 1,000 fuzz runs) | 22 | `cd contracts && forge test` |
-| Reporter unit + anvil e2e (vitest) | 15 | `cd reporter && npm test` |
+| Solidity (Foundry, 1,000 fuzz runs), incl. 7 ERC-7412 pull tests | 29 | `cd contracts && forge test` |
+| Reporter unit + anvil e2e (vitest), incl. ERC-7412 pull on a chain without Multicall3 | 16 | `cd reporter && npm test` |
+| Dashboard QA (Playwright, desktop + mobile, axe accessibility) against the production build and live Sepolia | 16 | `cd web && npm run test:e2e` (or `KURS_BASE_URL=https://kurs-ten-zeta.vercel.app`) |
 | **Cross-VM: ink! v6 reads the Solidity oracle** (local ink-node) | end to end | `cd reporter && npm run ink-e2e` |
 
 The cross-VM run deploys KursOracle, transmits a 5-reporter USD/IDR round, deploys KursRemit (ink! v6, PolkaVM), and checks that `KursRemit.latest()` returns exactly the oracle's round, then sends `quote_and_log` as a real transaction. Output: [`docs/ink-e2e-local.txt`](docs/ink-e2e-local.txt). ink-node v0.47 does not accept EVM bytecode, so locally the oracle is compiled to PolkaVM with resolc 0.5.0; Portaldot V3 accepts EVM bytecode and runs the solc build. KursRemit only sees an H160 that speaks the Solidity ABI, so its code is the same in both cases.
@@ -207,7 +230,7 @@ What the tests cover: median of odd and even sets, a 2-of-5 lying minority canno
 
 ## Roadmap
 
-- Done during the hacker house: oracle, clones, ring buffer, reporter and transmitter, 11 feeds, ink! v6 consumer, dashboard, Sepolia deployment with live rounds.
+- Done during the hacker house: oracle, clones, ring buffer, push relay and ERC-7412 pull, bundle API, 11 feeds, ink! v6 consumer verified cross-VM, dashboard with in-browser signature verification, Sepolia deployment with live rounds, 61 automated tests.
 - Next: independent reporter operators from the Portaldot community; owner moved to a native Multisig with a time delay; Kurs reporters as operators of the runtime `Oracle` pallet, so native pallets and contracts read the same prices; a read precompile proposal for the `Oracle` pallet; more chains in the relay (Base, BSC, Arbitrum), plus the bridge at bridge.portaldot.dev for POT-denominated feeds.
 
 ## Prior work and third-party code

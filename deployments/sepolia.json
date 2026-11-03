@@ -49,7 +49,8 @@
     "aggregator META/USD": "0xd4567b6df296eaa937956aa845a0ab33b8a053107ae503618fd4b8a00eedaaa8",
     "setFeed tPOT/pUSD": "0xd825916921744a84228b7c7c1b63680684dc8620d22aa9e4469734ed38b45787",
     "aggregator tPOT/pUSD": "0x92137241899a09c9bb186993dc933d48236ea7220e49bc784059a634ab74ecaf",
-    "deployConverter": "0x877f05e149383dc4d13381812a469c777f2181373bc3818ac8eb2b611fd3f1c1"
+    "deployConverter": "0x877f05e149383dc4d13381812a469c777f2181373bc3818ac8eb2b611fd3f1c1",
+    "erc7412 pull-convert (Multicall3: fulfillOracleQuery + convert)": "0x9e2aa23575734bba9b24b2ea6d25e9fc414a9b18cf2c3f64e323c3e9b17c405f"
   },
   "deployedAt": "2026-11-02T17:20:23.108Z",
   "converter": "0xa8268109f331dd0b219d424c91c5d3e06c490877"
