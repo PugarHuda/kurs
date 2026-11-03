@@ -1,17 +1,21 @@
-# Keeps the public feeds fresh: one transmitter round every 10 minutes.
-# The transmitter is untrusted by design; it only relays reporter signatures.
+# Keeps the public feeds live. GitHub delays or drops frequent cron triggers on
+# young repos (a */10 schedule fired once in two hours), so each hourly run keeps
+# the relay loop alive for 57 minutes; a late trigger only shortens a gap.
+# The transmitter is untrusted by design: it only relays reporter signatures.
 name: relay
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "5 * * * *"
   workflow_dispatch:
 
-concurrency: relay
+concurrency:
+  group: relay
+  cancel-in-progress: false
 
 jobs:
   relay:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 62
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,10 +23,12 @@ jobs:
           node-version: 22
       - run: npm ci
         working-directory: reporter
-      - run: npx tsx src/cli.ts once
+      - name: relay loop (57 min, a round check every 2 min)
         working-directory: reporter
+        run: timeout 57m npx tsx src/cli.ts run || [ $? -eq 124 ]
         env:
-          KURS_CHAINS: ${{ vars.KURS_CHAINS || 'portaldot' }}
+          KURS_CHAINS: ${{ vars.KURS_CHAINS || 'portaldot,sepolia' }}
+          KURS_INTERVAL_SECONDS: "120"
           DEPLOYER_PK: ${{ secrets.DEPLOYER_PK }}
           REPORTER_1_PK: ${{ secrets.REPORTER_1_PK }}
           REPORTER_2_PK: ${{ secrets.REPORTER_2_PK }}
