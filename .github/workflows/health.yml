@@ -1,0 +1,53 @@
+name: health
+# Hourly check of /api/health (feed ages on Portaldot and Sepolia).
+# A failing check opens one "feeds stale" issue (or comments on the open one);
+# the next passing check closes it.
+on:
+  schedule:
+    - cron: "35 * * * *" # half an hour after the relay starts
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  actions: write # to restart the relay
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: query /api/health
+        id: h
+        run: |
+          code=$(curl -s -o body.json -w '%{http_code}' --max-time 60 "${{ vars.KURS_SITE || 'https://kurs-ten-zeta.vercel.app' }}/api/health")
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "HTTP $code"; cat body.json
+          jq -r '.. | objects | select(.status? == "stale") | "\(.pair) age \(.ageSeconds)s"' body.json > stale.txt || true
+      - name: restart the relay if no run is active
+        if: steps.h.outputs.code != '200'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          active=$(gh run list --workflow relay.yml --json status -q '[.[] | select(.status=="in_progress" or .status=="queued" or .status=="pending")] | length')
+          if [ "$active" = "0" ]; then gh workflow run relay.yml --ref main && echo "relay restarted"; else echo "relay already running"; fi
+      - name: open or update the issue
+        if: steps.h.outputs.code != '200'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          body=$(printf 'Health check returned HTTP %s at %s.\n\nStale feeds:\n```\n%s\n```\nRun: %s/%s/actions/runs/%s' \
+            "${{ steps.h.outputs.code }}" "$(date -u +%FT%TZ)" "$(cat stale.txt)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          n=$(gh issue list --label health --state open --json number -q '.[0].number')
+          if [ -n "$n" ]; then gh issue comment "$n" --body "$body"
+          else gh label create health --color B60205 --force >/dev/null; gh issue create --title "Kurs feeds stale" --label health --body "$body"; fi
+          exit 1
+      - name: close a resolved issue
+        if: steps.h.outputs.code == '200'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for n in $(gh issue list --label health --state open --json number -q '.[].number'); do
+            gh issue close "$n" --comment "Healthy again at $(date -u +%FT%TZ)."
+          done

@@ -1,12 +1,17 @@
-# Keeps the public feeds live. GitHub delays or drops frequent cron triggers on
-# young repos (a */10 schedule fired once in two hours), so each hourly run keeps
-# the relay loop alive for 57 minutes; a late trigger only shortens a gap.
+# Keeps the public feeds live. GitHub delays or drops cron triggers on young repos
+# (a */10 schedule fired once in two hours; the hourly one stopped for hours), so
+# each run keeps the relay loop alive for 57 minutes and then dispatches the next
+# run itself. Cron and the health workflow only restart the chain if it breaks.
 # The transmitter is untrusted by design: it only relays reporter signatures.
 name: relay
 on:
   schedule:
     - cron: "5 * * * *"
   workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write # to dispatch the next run
 
 concurrency:
   group: relay
@@ -35,3 +40,10 @@ jobs:
           REPORTER_3_PK: ${{ secrets.REPORTER_3_PK }}
           REPORTER_4_PK: ${{ secrets.REPORTER_4_PK }}
           REPORTER_5_PK: ${{ secrets.REPORTER_5_PK }}
+      - name: chain the next run
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        # the concurrency group holds it until this run ends; extra pending runs are dropped
+        run: gh workflow run relay.yml --ref main

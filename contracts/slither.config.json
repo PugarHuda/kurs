@@ -1,0 +1,5 @@
+{
+  "filter_paths": "lib/|test/|script/",
+  "detectors_to_exclude": "locked-ether,reentrancy-no-eth,reentrancy-benign,reentrancy-events,unused-return,shadowing-local,missing-zero-check,timestamp,assembly,naming-convention,too-many-digits,cache-array-length",
+  "exclude_informational": false
+}

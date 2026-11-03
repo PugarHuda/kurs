@@ -12,6 +12,19 @@ jobs:
       - run: forge test -vv
         working-directory: contracts
 
+  slither:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install slither-analyzer==0.11.6
+      # triage of every excluded detector: docs/security.md
+      - run: slither . --fail-medium
+        working-directory: contracts
+
   reporter:
     runs-on: ubuntu-latest
     steps:
