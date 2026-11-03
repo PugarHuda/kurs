@@ -136,7 +136,7 @@ li { margin-bottom: 12px; }
   <h2 style="color:#fff">Built during the hacker house</h2>
   <div class="stats">
     <div><div class="big">11</div><p class="soft">feeds: BTC, ETH, DOT, USDT, USD/IDR, five equities, tPOT</p></div>
-    <div><div class="big">93</div><p class="soft">tests: 42 Solidity incl. invariants, 17 TypeScript, 34 Playwright; Slither in CI</p></div>
+    <div><div class="big">103</div><p class="soft">tests: 52 Solidity incl. invariants, 17 TypeScript, 34 Playwright; Slither in CI</p></div>
     <div><div class="big">2</div><p class="soft">VMs reading one oracle: EVM and PolkaVM (ink! v6)</p></div>
     <div><div class="big">5</div><p class="soft">reporters, quorum 3, median on chain</p></div>
     <div><div class="big">0</div><p class="soft">servers: the dashboard reads public RPCs in the browser</p></div>
@@ -152,8 +152,8 @@ li { margin-bottom: 12px; }
       <tr><th>What</th><th>Where</th></tr>
       <tr><td>KursOracle v2, factory, 11 feed clones, KursConverter</td><td>Ethereum Sepolia, oracle <code>0xd3f6…cbc3</code>, all verified on Sourcify</td></tr>
       <tr><td>Rounds pushed by 5 reporters, every signer on chain</td><td>RoundUpdated events, re-verified in the browser by the dashboard</td></tr>
-      <tr><td>ERC-7412 pull in one transaction</td><td>Multicall3: fulfillOracleQuery + convert, tx <code>0x9e2a…405f</code></td></tr>
       <tr><td>ink! v6 reads the Solidity oracle</td><td>pallet-revive node: KursRemit.latest() equals the oracle round</td></tr>
+      <tr><td>Drop-in for existing DeFi oracle interfaces</td><td>Chainlink V2/V3, Pyth IPyth (incl. updatePriceFeeds), ERC-7726, Morpho Blue IOracle; Sepolia, Sourcify-verified</td></tr>
       <tr><td>Portaldot-native price on Ethereum</td><td>tPOT/pUSD from AssetConversion, live on Sepolia</td></tr>
       <tr><td>Live on Portaldot V3</td><td>KursOracle <code>0x5bdd…56f4</code>, 11 feeds, rounds every ~64 min at ~0.1 tPOT, mirrored to Sepolia</td></tr>
       <tr><td>Owner behind a native multisig + timelock</td><td>pallet-proxy pure proxy, 2-of-3 pallet-multisig, 600-block delay; early execution rejected on chain</td></tr>

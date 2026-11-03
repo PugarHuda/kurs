@@ -23,6 +23,8 @@ instead of in the source.
 | assembly, too-many-digits | Info | EIP-1167 clone bytecode in the factory | Standard minimal-proxy bytecode. |
 | naming-convention | Info | `DOMAIN_SEPARATOR` | The EIP-712 name. |
 | cache-array-length | Optimization | `_reporters.length` in a loop | At most 32 reporters; the code path runs only in owner configuration. |
+| calls-loop | Low | `KursPyth.updatePriceFeeds` calls `fulfillOracleQuery` once per update | Pyth's batch semantics. Every call goes to the immutable Kurs oracle, never to a caller-chosen address; one bad bundle reverts the whole batch, which is what Pyth does too. |
+| missing-inheritance | Info | `KursQuoteOracle` does not inherit the `IERC7726` interface declared in `KursMorphoOracle.sol` | Same ABI either way; adding the `is` clause would change the deployed bytecode's metadata and break the Sourcify exact match of the live contract. |
 
 ## Foundry invariants
 

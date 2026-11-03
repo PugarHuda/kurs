@@ -54,7 +54,10 @@
     "erc7412 pull via hosted bundle API (/api/bundle) + Multicall3": "0x9c14d79228585b3447d01fb26d6471bce6534ec4321aa06306871923e9bd00d9",
     "transferOwnership(safe)": "0xfbab08bba8f95a01aa2be23fbe82e2d66165d5f021086b416824813ff7979268",
     "Safe execTransaction(acceptOwnership)": "0xbc6efd9b0e2b5fd38c20d6facfc66c717b612234cacf422c29b7e12981c522dd",
-    "deploy KursQuoteOracle (ERC-7726)": "0x27b60121415e79862eecc75ddeee7b3d8fe71db7c9fa99284743c64ffe842354"
+    "deploy KursQuoteOracle (ERC-7726)": "0x27b60121415e79862eecc75ddeee7b3d8fe71db7c9fa99284743c64ffe842354",
+    "deploy pyth": "0x3cb2e92810d7891c0ae06783a3a23391bd9e750a4545c5bbcba6c0634fe016a1",
+    "deploy morphoOracleBtcIdr": "0xd727c81f3b8d94c0c182a0426469f79adabe2b20a85c12431db6e186fd1d9805",
+    "Pyth updatePriceFeeds (BTC/USD, USD/IDR bundles)": "0xdd34b89a8050467bf8a2449eba340553fae033605464bdc0a8a1f8269c364a0e"
   },
   "deployedAt": "2026-11-02T17:20:23.108Z",
   "converter": "0xa8268109f331dd0b219d424c91c5d3e06c490877",
@@ -82,5 +85,7 @@
     "AMZN/USD": "0x23cfb56fbfc5ebdf4e538c2ff6fbbf143de0eae4",
     "META/USD": "0x78ec9fda671c924e48130eaeef2763679208bd82",
     "tPOT/pUSD": "0x258a4423a14a4974fafb754b0eee0ee6decb3f39"
-  }
+  },
+  "pyth": "0x22cd6de783b69a2742a389c037dbe77999fabaa7",
+  "morphoOracleBtcIdr": "0xdcdc450ff50f0925e3b9ca5b83db92e7614026e5"
 }

@@ -47,6 +47,8 @@ for (const d of deployments) {
   if (d.converter) md += `| KursConverter (ERC-7412 pull consumer, USD/IDR) | ${cell(n.addr(d.converter), d.converter)} |\n`;
   if (d.kursRemit) md += `| KursRemit (ink! v6) | ${cell(n.addr(d.kursRemit), d.kursRemit)} |\n`;
   if (d.quoteOracle) md += `| KursQuoteOracle (ERC-7726 getQuote: BTC, ETH, USD, IDR, pivots through USD) | ${cell(n.addr(d.quoteOracle), d.quoteOracle)} |\n`;
+  if (d.pyth) md += `| KursPyth (Pyth IPyth: getPrice, updatePriceFeeds with Kurs bundles) | ${cell(n.addr(d.pyth), d.pyth)} |\n`;
+  if (d.morphoOracleBtcIdr) md += `| KursMorphoOracle (Morpho Blue IOracle, BTC collateral / Rupiah loan token) | ${cell(n.addr(d.morphoOracleBtcIdr), d.morphoOracleBtcIdr)} |\n`;
   if (d.chain === "portaldot")
     md += `\nThe same prices read through the Substrate runtime API \`ReviveApi_call\` (node WebSocket, no EVM RPC): [/api/substrate](https://kurs-ten-zeta.vercel.app/api/substrate), or \`npx tsx scripts/substrate-read.ts\` in reporter/, which also checks they match the EVM RPC.\n`;
   const owner = await c.readContract({ address: d.oracle, abi: oracleAbi, functionName: "owner" }).catch(() => null);
@@ -99,6 +101,19 @@ for (const d of deployments) {
       md += `| ${pair} | ${cell(n.addr(a), short(a))} | ${ans === null ? "n/a" : ans.toString()} |\n`;
     }
   }
+  if (d.pyth) {
+    const pythAbi = [{ type: "function", name: "getPriceUnsafe", stateMutability: "view", inputs: [{ type: "bytes32" }], outputs: [{ type: "tuple", components: [{ name: "price", type: "int64" }, { name: "conf", type: "uint64" }, { name: "expo", type: "int32" }, { name: "publishTime", type: "uint256" }] }] }];
+    const priceAbi = [{ type: "function", name: "price", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }];
+    md += `\n### Pyth and Morpho views (read live)\n\n| Call | Result |\n|---|---|\n`;
+    for (const pair of ["BTC/USD", "USD/IDR"]) {
+      const p = await c.readContract({ address: d.pyth, abi: pythAbi, functionName: "getPriceUnsafe", args: [keccak256(toBytes(pair))] }).catch(() => null);
+      md += `| \`KursPyth.getPriceUnsafe(keccak256("${pair}"))\` | ${p ? `price ${p.price}, expo ${p.expo} (= ${Number(p.price) * 10 ** p.expo}), conf ${p.conf}, publishTime ${new Date(Number(p.publishTime) * 1000).toISOString()}` : "n/a"} |\n`;
+    }
+    if (d.morphoOracleBtcIdr) {
+      const mp = await c.readContract({ address: d.morphoOracleBtcIdr, abi: priceAbi, functionName: "price" }).catch(() => null);
+      md += `| \`KursMorphoOracle.price()\` | ${mp === null ? "reverts: a leg is older than the quote oracle's maxAge (ERC-7412 OracleDataRequired)" : `${mp} (1 BTC = Rp ${(Number((mp * 10n ** 8n) / 10n ** 36n) / 100).toLocaleString("en-US")})`} |\n`;
+    }
+  }
   md += `\n### Transactions\n\n| What | Transaction |\n|---|---|\n`;
   for (const [what, h] of Object.entries(d.txs)) {
     const rc = await c.getTransactionReceipt({ hash: h }).catch(() => null);
@@ -126,7 +141,7 @@ Sepolia contracts are verified on Sourcify with an exact match:
 ${deployments
   .filter((d) => d.chain === "sepolia")
   .map((d) =>
-    [d.oracle, d.factory, d.converter, d.quoteOracle, ...Object.values(d.aggregatorsV2 ?? {})]
+    [d.oracle, d.factory, d.converter, d.quoteOracle, d.pyth, d.morphoOracleBtcIdr, ...Object.values(d.aggregatorsV2 ?? {})]
       .filter(Boolean)
       .map((a) => `- https://repo.sourcify.dev/contracts/full_match/11155111/${a}/`)
       .join("\n"),
