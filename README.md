@@ -235,7 +235,7 @@ What the tests cover: median of odd and even sets, a 2-of-5 lying minority canno
 | **ERC-7726** `getQuote(amount, base, quote)` via `KursQuoteOracle` | Euler v2 and other modular lenders; BTC, ETH, USD (840), IDR (360), with cross rates through USD (1 BTC in Rupiah) | Sepolia; Portaldot estimate 229 tPOT, deferred so the relay keeps its gas |
 | **Substrate runtime API** `ReviveApi_call` | Polkadot wallets, polkadot.js / PAPI clients, off-chain workers: no EVM RPC needed | Portaldot: [`/api/substrate`](https://kurs-ten-zeta.vercel.app/api/substrate), `reporter/src/substrate.ts` |
 | ink! v6 cross-contract call (Solidity ABI) | ink! contracts on pallet-revive | `ink/kurs_consumer` |
-| HTTP: `/api/feeds`, `/api/bundle`, `/api/health` | dashboards, ERC-7412 clients, monitors | Vercel |
+| HTTP: `/api/feeds`, `/api/bundle`, `/api/health`, `/api/substrate`, `/api/history` (full round history from `RoundUpdated` logs, past the 64-round buffer) | dashboards, ERC-7412 clients, monitors, indexers | Vercel; OpenAPI 3.1 spec at [`/openapi.json`](https://kurs-ten-zeta.vercel.app/openapi.json), linted by Redocly and contract-tested against the live responses |
 
 ## Governance: a native Portaldot multisig owns the oracle
 

@@ -1,0 +1,630 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kurs API",
+    "version": "1.0.0",
+    "summary": "Signed price feeds for Portaldot V3 and Ethereum Sepolia.",
+    "description": "Read-only HTTP interface to Kurs. Every price here is also on chain: these endpoints read the contracts, sign fresh ERC-7412 bundles, or rebuild history from logs. Nothing is cached beyond the stated max-age. Public and unauthenticated: no API key.",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    },
+    "contact": {
+      "url": "https://github.com/PugarHuda/kurs"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://kurs-ten-zeta.vercel.app"
+    }
+  ],
+  "tags": [
+    {
+      "name": "feeds",
+      "description": "Feed catalogue and on-chain state"
+    },
+    {
+      "name": "pull",
+      "description": "ERC-7412 signed bundles"
+    },
+    {
+      "name": "ops",
+      "description": "Monitoring"
+    }
+  ],
+  "paths": {
+    "/api/feeds": {
+      "get": {
+        "tags": [
+          "feeds"
+        ],
+        "operationId": "listFeeds",
+        "summary": "Every feed with its id, parameters, sources and AggregatorV3 address per network",
+        "responses": {
+          "200": {
+            "description": "Feed catalogue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bundle": {
+      "get": {
+        "tags": [
+          "pull"
+        ],
+        "operationId": "getBundle",
+        "summary": "A freshly signed observation bundle and its ERC-7412 payload",
+        "description": "Pass `payload` to `KursOracle.fulfillOracleQuery` on any chain running Kurs, e.g. inside `Multicall3.aggregate3` before the call that needs a fresh price.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Pair"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bundle"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "operationId": "getHealth",
+        "summary": "Age of every feed's latest round on every network",
+        "description": "200 when every feed is within twice its heartbeat (Portaldot: the 64-minute slot-aligned cadence), 503 otherwise.",
+        "responses": {
+          "200": {
+            "description": "All feeds fresh",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "At least one feed stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/substrate": {
+      "get": {
+        "tags": [
+          "feeds"
+        ],
+        "operationId": "readViaSubstrate",
+        "summary": "Every Portaldot feed read through the Substrate runtime API ReviveApi_call",
+        "description": "Uses only the node WebSocket (state_call ReviveApi_call), no EVM RPC: the path a Polkadot wallet or polkadot.js client takes.",
+        "responses": {
+          "200": {
+            "description": "Latest rounds at one block",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubstrateRead"
+                }
+              }
+            }
+          },
+          "502": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/history": {
+      "get": {
+        "tags": [
+          "feeds"
+        ],
+        "operationId": "getHistory",
+        "summary": "Every round a feed has had, rebuilt from RoundUpdated logs",
+        "description": "Covers history past the contract's 64-round ring buffer. Newest first.",
+        "parameters": [
+          {
+            "name": "net",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "portaldot",
+                "sepolia"
+              ],
+              "default": "portaldot"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Pair"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000,
+              "default": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Round history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/History"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "502": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Pair": {
+        "name": "pair",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "BTC/USD",
+            "ETH/USD",
+            "DOT/USD",
+            "USDT/USD",
+            "USD/IDR",
+            "TSLA/USD",
+            "NVDA/USD",
+            "AAPL/USD",
+            "AMZN/USD",
+            "META/USD",
+            "tPOT/pUSD"
+          ]
+        },
+        "example": "USD/IDR"
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "error"
+              ],
+              "properties": {
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Hex32": {
+        "type": "string",
+        "pattern": "^0x[0-9a-fA-F]{64}$"
+      },
+      "Address": {
+        "type": "string",
+        "pattern": "^0x[0-9a-fA-F]{40}$"
+      },
+      "FeedList": {
+        "type": "object",
+        "required": [
+          "feeds"
+        ],
+        "properties": {
+          "feeds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "pair",
+                "feedId",
+                "decimals",
+                "heartbeat",
+                "deviationBps",
+                "maxSpreadBps",
+                "sources",
+                "aggregators"
+              ],
+              "properties": {
+                "pair": {
+                  "type": "string"
+                },
+                "feedId": {
+                  "$ref": "#/components/schemas/Hex32",
+                  "description": "keccak256(pair)"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "decimals": {
+                  "type": "integer"
+                },
+                "heartbeat": {
+                  "type": "integer",
+                  "description": "seconds"
+                },
+                "deviationBps": {
+                  "type": "integer"
+                },
+                "maxSpreadBps": {
+                  "type": "integer"
+                },
+                "sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "aggregators": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/Address"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Bundle": {
+        "type": "object",
+        "required": [
+          "pair",
+          "feedId",
+          "decimals",
+          "roundId",
+          "answer",
+          "sources",
+          "reporters",
+          "observations",
+          "payload"
+        ],
+        "properties": {
+          "pair": {
+            "type": "string"
+          },
+          "feedId": {
+            "$ref": "#/components/schemas/Hex32"
+          },
+          "decimals": {
+            "type": "integer"
+          },
+          "roundId": {
+            "type": "string",
+            "description": "uint80 as decimal string"
+          },
+          "answer": {
+            "type": "string",
+            "description": "median, scaled by 10^decimals"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "price": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "reporters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Address"
+            }
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "reporter",
+                "roundId",
+                "answer",
+                "observedAt",
+                "r",
+                "s",
+                "v"
+              ],
+              "properties": {
+                "reporter": {
+                  "$ref": "#/components/schemas/Address"
+                },
+                "roundId": {
+                  "type": "string"
+                },
+                "answer": {
+                  "type": "string"
+                },
+                "observedAt": {
+                  "type": "string",
+                  "description": "unix seconds"
+                },
+                "r": {
+                  "$ref": "#/components/schemas/Hex32"
+                },
+                "s": {
+                  "$ref": "#/components/schemas/Hex32"
+                },
+                "v": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "payload": {
+            "type": "string",
+            "description": "ABI-encoded fulfillOracleQuery argument"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "ok",
+          "checkedAt",
+          "networks"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "networks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "chain",
+                "oracle",
+                "feeds"
+              ],
+              "properties": {
+                "chain": {
+                  "type": "string"
+                },
+                "oracle": {
+                  "$ref": "#/components/schemas/Address"
+                },
+                "feeds": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "pair",
+                      "status"
+                    ],
+                    "properties": {
+                      "pair": {
+                        "type": "string"
+                      },
+                      "roundId": {
+                        "type": "string"
+                      },
+                      "answer": {
+                        "type": "string"
+                      },
+                      "ageSeconds": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "ok",
+                          "stale",
+                          "no data",
+                          "unreadable"
+                        ]
+                      },
+                      "error": {
+                        "type": "string",
+                        "description": "present when status is unreadable"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "SubstrateRead": {
+        "type": "object",
+        "required": [
+          "network",
+          "via",
+          "node",
+          "oracle",
+          "block",
+          "blockHash",
+          "feeds"
+        ],
+        "properties": {
+          "network": {
+            "type": "string"
+          },
+          "via": {
+            "type": "string"
+          },
+          "node": {
+            "type": "string"
+          },
+          "oracle": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "block": {
+            "type": "integer"
+          },
+          "blockHash": {
+            "$ref": "#/components/schemas/Hex32"
+          },
+          "feeds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "pair",
+                "roundId",
+                "answer",
+                "updatedAt"
+              ],
+              "properties": {
+                "pair": {
+                  "type": "string"
+                },
+                "roundId": {
+                  "type": "string"
+                },
+                "answer": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        }
+      },
+      "History": {
+        "type": "object",
+        "required": [
+          "net",
+          "pair",
+          "oracle",
+          "fromBlock",
+          "toBlock",
+          "total",
+          "rounds"
+        ],
+        "properties": {
+          "net": {
+            "type": "string"
+          },
+          "pair": {
+            "type": "string"
+          },
+          "oracle": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "fromBlock": {
+            "type": "integer"
+          },
+          "toBlock": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "rounds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "roundId",
+                "answer",
+                "observedAt",
+                "signers",
+                "transmitter",
+                "block",
+                "tx"
+              ],
+              "properties": {
+                "roundId": {
+                  "type": "string"
+                },
+                "answer": {
+                  "type": "string"
+                },
+                "observedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "signers": {
+                  "type": "integer"
+                },
+                "transmitter": {
+                  "$ref": "#/components/schemas/Address"
+                },
+                "block": {
+                  "type": "integer"
+                },
+                "tx": {
+                  "$ref": "#/components/schemas/Hex32"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": []
+}

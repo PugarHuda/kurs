@@ -154,3 +154,48 @@ test("the dashboard is in English (no Indonesian UI copy)", async ({ page }) => 
   await expect(page.locator("#board-title")).toHaveText(/Today's rates/);
   await expect(page.locator("body")).not.toContainText(/hari ini|terakhir|sumber/i);
 });
+
+test("full round history comes from RoundUpdated logs via /api/history", async ({ page, request }) => {
+  const r = await request.get("/api/history?net=sepolia&pair=USD/IDR&limit=3", { timeout: 90_000 });
+  expect(r.ok()).toBeTruthy();
+  const b = await r.json();
+  expect(b.total).toBeGreaterThan(0);
+  expect(b.rounds[0].tx).toMatch(/^0x[0-9a-f]{64}$/);
+  // newest first, strictly decreasing round ids
+  const ids = b.rounds.map((x: { roundId: string }) => BigInt(x.roundId));
+  for (let i = 1; i < ids.length; i++) expect(ids[i] < ids[i - 1]).toBeTruthy();
+  await page.goto("/?net=portaldot&feed=USD%2FIDR");
+  await expect(page.locator("#full-history")).toContainText(/All \d+ rounds since block/, { timeout: 90_000 });
+});
+
+// Contract test: every live endpoint answers with what /openapi.json documents
+// (required fields, enums, nested objects and arrays, followed through $ref).
+type Schema = { $ref?: string; type?: string | string[]; required?: string[]; properties?: Record<string, Schema>; items?: Schema; enum?: unknown[]; oneOf?: Schema[] };
+function check(spec: { components: { schemas: Record<string, Schema> } }, s: Schema, v: unknown, at: string, errs: string[]) {
+  if (s.$ref) return check(spec, spec.components.schemas[s.$ref.split("/").pop()!], v, at, errs);
+  if (s.oneOf) return; // only used for nullable addresses
+  if (s.enum && !s.enum.includes(v)) errs.push(`${at}: ${JSON.stringify(v)} not in ${JSON.stringify(s.enum)}`);
+  if (s.type === "object" && v && typeof v === "object") {
+    for (const k of s.required ?? []) if (!(k in (v as object))) errs.push(`${at}.${k} missing`);
+    for (const [k, sub] of Object.entries(s.properties ?? {})) if (k in (v as object)) check(spec, sub, (v as Record<string, unknown>)[k], `${at}.${k}`, errs);
+  }
+  if (s.type === "array" && Array.isArray(v) && s.items) v.slice(0, 20).forEach((x, i) => check(spec, s.items!, x, `${at}[${i}]`, errs));
+}
+
+test("every API response matches openapi.json", async ({ request }) => {
+  const spec = await (await request.get("/openapi.json")).json();
+  const calls: [string, string, string][] = [
+    ["/api/feeds", "FeedList", "200"],
+    ["/api/bundle?pair=USD/IDR", "Bundle", "200"],
+    ["/api/health", "Health", "any"],
+    ["/api/substrate", "SubstrateRead", "200"],
+    ["/api/history?net=sepolia&pair=USD/IDR&limit=3", "History", "200"],
+  ];
+  const errs: string[] = [];
+  for (const [url, schema, want] of calls) {
+    const r = await request.get(url, { timeout: 90_000 });
+    if (want === "200" && r.status() !== 200) errs.push(`${url}: HTTP ${r.status()}`);
+    check(spec, { $ref: `#/components/schemas/${schema}` }, await r.json(), url, errs);
+  }
+  expect(errs).toEqual([]);
+});

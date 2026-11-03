@@ -80,6 +80,65 @@
         "hash": "0x9c057bc8d2ad4aa2cd525e689e78fb8a0de09de36d59caff292fedd6a933137a",
         "block": "0xd5b2ab8d73aaa5d3ac07207d8ea3834398faec20f6ee8efb8863acac18e6050c"
       }
+    },
+    "timelock": {
+      "delayBlocks": 600,
+      "steps": {
+        "createPure": {
+          "approve": {
+            "hash": "0x16c22ec53509d6e7ebd0f101aa5c4057bf0c67bc3d4ea73abf8856073f87bf07",
+            "block": "0x0b9d94c2a84a82dfb14b967f73c19340fab18900e80ac402ff5a6261ff35bc38"
+          },
+          "execute": {
+            "hash": "0xbd3e4591e571089148eb1fbdbf994a75320f057f9eaecf83f42f28625034553b",
+            "block": "0xbb4a8de585c8b0d86e4d946b9fe75648b8d07e902d74aaf37b1830eafca5bd13"
+          }
+        },
+        "fund multisig": {
+          "hash": "0x347ff9b6c3b709436f647d45ff15c1f379020a550d4b742ce3d617433843386d",
+          "block": "0x29ce587463e871fc491859a340a75234533f5d4b0e1192d0696be95f132eeb9a"
+        },
+        "fund pure proxy": {
+          "hash": "0x9659d39d76ff921ff6c091bce9843627c99212504bc810113511ca0b58964545",
+          "block": "0x967fefef72c92005b60bb9a05ccb88a7bb2e194fdaadbf75f42961d4dcd7c455"
+        },
+        "transferOwnership(pure proxy)": {
+          "approve": {
+            "hash": "0x8e5c577c5e6e6165f74261b131172b7ded584ed03d9bd34abf890b23ce5bca28",
+            "block": "0x10f93b474afd57e9e252e7db27f54c23e958d8cae1e9ea9a414351c15afaa018"
+          },
+          "execute": {
+            "hash": "0xbf78ff3f2e827f125ff105a95cea50bb9bdaa989af6f7236badb1f95ce43e4b3",
+            "block": "0x16b2af0e6fd6eb3c496607039f5c291bb28e0b8133e34cb6122464c006fea705"
+          }
+        },
+        "announce acceptOwnership": {
+          "approve": {
+            "hash": "0x44ce716aedb5f91b7b82cf5e12ea908100c73e42a7518ab8a90e5d07ba761923",
+            "block": "0x781df96726c7ff15a38a0c0b4fef2151d2249276388baf2456f7e34c27e0aa23"
+          },
+          "execute": {
+            "hash": "0x2b49aae85c429d125d1b9b8e436eb937c9d0b2c1aeffbab31a7e0fff8d6c5f8e",
+            "block": "0x9ce869b9931d75e94387279640ceaa42c0f681944387e55bc9f1c4f35821d60d"
+          }
+        }
+      },
+      "pure": "5Dnq7UGyuhpLTrx9j4bZsSNqS7BKHWeFHe8nkmxHJdah4JMu",
+      "pureH160": "0xae765c071001da195c77fc1089f45ab73518c8b5",
+      "announcedAt": 302934,
+      "callHash": "0x2b9927c0ed6b7c8dce595a1c38634901457313c88c42d75877d3897df3c80d20",
+      "rejectedEarly": {
+        "early proxyAnnounced": {
+          "error": "proxy.Unannounced",
+          "hash": "0xe81376af7228dd1dd84875c033c21c7b74d3ce7d0d591aa6046e8585505a5e26",
+          "block": "0x0ed50cc16a94b4723aba19c41f277b56345ea57fedd917adb574fc784ae43b8d"
+        },
+        "direct proxy.proxy": {
+          "error": "proxy.NotProxy",
+          "hash": "0xe3cd65496cd1067c860d2fd5ed65123c523373bf11b65283bb88bfd2681bcae9",
+          "block": "0x419514fd20ec33b530c279989b915b21cd231ab5abb166d9a85efa5974083828"
+        }
+      }
     }
   }
 }

@@ -134,14 +134,36 @@ function spark(f: FeedState) {
         <path d="${d}" />
         <circle cx="${x(pts.length - 1)}" cy="${y(ys.at(-1)!)}" r="3.5" />
       </svg>
-      <figcaption>Last ${pts.length} rounds on chain. Low ${fmt(BigInt(lo), dec)}, high ${fmt(BigInt(hi), dec)}.</figcaption>
+      <figcaption>Last ${pts.length} rounds on chain. Low ${fmt(BigInt(lo), dec)}, high ${fmt(BigInt(hi), dec)}. <span id="full-history"></span></figcaption>
     </figure>`;
+}
+
+// full history from RoundUpdated logs (/api/history), cached per feed for a minute
+const historyCache = new Map<string, { at: number; html: string }>();
+async function renderFullHistory(chain: string, pair: string) {
+  const key = `${chain}|${pair}`;
+  let hit = historyCache.get(key);
+  if (!hit || Date.now() - hit.at > 60_000) {
+    try {
+      const r = await fetch(`/api/history?net=${chain}&pair=${encodeURIComponent(pair)}&limit=1`);
+      if (!r.ok) return;
+      const b = (await r.json()) as { total: number; fromBlock: number };
+      const url = `/api/history?net=${chain}&pair=${encodeURIComponent(pair)}`;
+      hit = { at: Date.now(), html: `<a href="${esc(url)}">All ${b.total} rounds since block ${b.fromBlock.toLocaleString("en-US")}</a>, rebuilt from RoundUpdated logs.` };
+      historyCache.set(key, hit);
+    } catch {
+      return; // the static preview has no /api
+    }
+  }
+  const el = document.querySelector("#full-history");
+  if (el && current?.chain === chain && selected === pair) el.innerHTML = hit.html;
 }
 
 function renderDetail(s: Snapshot) {
   const f = s.feeds.find((x) => x.feed.pair === selected) ?? s.feeds[0];
   const d = s.deployment;
   const ev = f.history.at(-1);
+  queueMicrotask(() => void renderFullHistory(d.chain, f.feed.pair)); // after the detail HTML is in place
   const sources = Object.keys(f.feed.sources)
     .map((k) => `<li>${esc(k)}</li>`)
     .join("");
