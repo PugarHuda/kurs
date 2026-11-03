@@ -13,7 +13,7 @@
   --board: #13233a; /* money-changer board */
   --board-2: #1b2f4c;
   --led: #ffb000;
-  --led-dim: #4a3a18;
+  --led-dim: #b09460; /* unlit but readable: 5.5:1 on the board, 4.6:1 on the selected row */
   --up: #5fd38d;
   --down: #ff6b6b;
   --red: #c4162f;
@@ -687,4 +687,14 @@ table.sigs td:first-child {
 
 .bad-text {
   color: var(--red);
+}
+
+/* reserve the loaded board's height so nothing below jumps when the rounds arrive (CLS) */
+#board-body td.loading {
+  height: 760px;
+}
+@media (max-width: 600px) {
+  #board-body td.loading {
+    height: 720px;
+  }
 }

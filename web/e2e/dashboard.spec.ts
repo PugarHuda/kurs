@@ -114,3 +114,27 @@ test("parity still lists both networks after switching to Sepolia", async ({ pag
   await expect(page.locator("#parity table")).toContainText("Portaldot V3", { timeout: 45_000 });
   await expect(page.locator("#parity")).not.toContainText("one network so far");
 });
+
+test("stale rows stay readable (contrast) and the board does not shift the page", async ({ page }) => {
+  await page.goto("/?net=portaldot");
+  await page.locator("#board-body tr[data-pair]").nth(10).waitFor({ timeout: 60_000 });
+  // force the stale look on every row, as when the relay is down
+  await page.evaluate(() => document.querySelectorAll("#board-body tr[data-pair]").forEach((tr) => tr.classList.add("stale")));
+  const results = await new AxeBuilder({ page }).include("#board-body").withRules(["color-contrast"]).analyze();
+  expect(results.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+});
+
+test("layout shift while the board loads stays under 0.1", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { __cls: number }).__cls = 0;
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[])
+        if (!e.hadRecentInput) (window as unknown as { __cls: number }).__cls += e.value;
+    }).observe({ type: "layout-shift", buffered: true });
+  });
+  await page.goto("/?net=portaldot");
+  await page.locator("#board-body tr[data-pair]").nth(10).waitFor({ timeout: 60_000 });
+  await page.waitForTimeout(1500);
+  const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+  expect(cls).toBeLessThan(0.1);
+});
