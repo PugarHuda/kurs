@@ -95,8 +95,8 @@
           }
         },
         "fund multisig": {
-          "hash": "0x347ff9b6c3b709436f647d45ff15c1f379020a550d4b742ce3d617433843386d",
-          "block": "0x29ce587463e871fc491859a340a75234533f5d4b0e1192d0696be95f132eeb9a"
+          "hash": "0xcff7a4b5ced318f7373156d868bb791e7d94e0e9c2e91517694e899bf856e297",
+          "block": "0x50d3062c902b6009900b780b545dc7b53d5f143a8b189f8eb017cf05bdd20d90"
         },
         "fund pure proxy": {
           "hash": "0x9659d39d76ff921ff6c091bce9843627c99212504bc810113511ca0b58964545",
@@ -121,6 +121,10 @@
             "hash": "0x2b49aae85c429d125d1b9b8e436eb937c9d0b2c1aeffbab31a7e0fff8d6c5f8e",
             "block": "0x9ce869b9931d75e94387279640ceaa42c0f681944387e55bc9f1c4f35821d60d"
           }
+        },
+        "execute after delay (proxy.proxyAnnounced)": {
+          "hash": "0xb65329783e255362f5a5ab160b5db00cf98ead34ab6f498024dccb6ff38f408d",
+          "block": "0xd61472e8d8c8cdd65f28caa48a84674709c74999bfb7a25438b5a9d9436d4d19"
         }
       },
       "pure": "5Dnq7UGyuhpLTrx9j4bZsSNqS7BKHWeFHe8nkmxHJdah4JMu",
@@ -138,7 +142,8 @@
           "hash": "0xe3cd65496cd1067c860d2fd5ed65123c523373bf11b65283bb88bfd2681bcae9",
           "block": "0x419514fd20ec33b530c279989b915b21cd231ab5abb166d9a85efa5974083828"
         }
-      }
+      },
+      "executedAt": 303543
     }
   }
 }

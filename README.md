@@ -241,6 +241,8 @@ What the tests cover: median of odd and even sets, a 2-of-5 lying minority canno
 
 On Portaldot V3, `KursOracle.owner()` is not a key: it is a **2-of-3 `pallet-multisig` account**. `reporter/scripts/multisig-owner.ts` did the handoff on chain: signer A funded the multisig account, the deployer called `transferOwnership(<multisig's Revive address>)`, then `multisig.asMulti` wrapped `utility.batchAll[revive.mapAccount, revive.call(acceptOwnership)]`, approved by A and executed by B. From now on, adding a feed, rotating reporters or moving ownership takes two Substrate signatures that reach the EVM contract through `revive.call`. The dashboard's "Who can change Kurs here" panel reads `owner()` live; the extrinsics are in [`docs/evidence.md`](docs/evidence.md).
 
+**Timelock.** The multisig then put a delay in front of itself, again with native pallets only (`reporter/scripts/timelock-owner.ts`): ownership moved to a **pure proxy** that the multisig controls through `pallet-proxy` with a **600-block delay (~1 hour)**. Every owner action is now announced by 2 of 3 signers (`proxy.announce`), can run only 600 blocks later (`proxy.proxyAnnounced`), and can be vetoed in between (`proxy.rejectAnnouncement`). Executing early was tried on chain and rejected (`proxy.Unannounced`); so was a single signer using the proxy directly (`proxy.NotProxy`). `owner()` now returns the pure proxy.
+
 On Ethereum Sepolia the same role belongs to a **2-of-3 Safe** (`reporter/scripts/safe-owner.ts`, Safe{Core} protocol-kit): the Safe was deployed, the deployer proposed it, and two Safe owners signed `acceptOwnership`. No Kurs deployment is owned by a single key any more.
 
 ## Operations
@@ -261,7 +263,7 @@ On Ethereum Sepolia the same role belongs to a **2-of-3 Safe** (`reporter/script
 ## Roadmap
 
 - Done during the hacker house: oracle, clones, ring buffer, push relay and ERC-7412 pull, bundle API, 11 feeds, ink! v6 consumer verified cross-VM, dashboard with in-browser signature verification, live on Portaldot V3 and Sepolia with an hourly relay and /api/health, ERC-7412 pull executed on both chains, owner handed to a native 2-of-3 pallet-multisig (Portaldot) and a 2-of-3 Safe (Sepolia), 87 automated tests incl. Foundry invariants over 128k random transmits, Slither in CI with every finding triaged in [docs/security.md](docs/security.md), Lighthouse 100/100/100/100 on mobile.
-- Next: independent reporter operators from the Portaldot community; a time delay on the multisig owner (pallet-proxy announcements); Kurs reporters as operators of the runtime `Oracle` pallet, so native pallets and contracts read the same prices; a read precompile proposal for the `Oracle` pallet; more chains in the relay (Base, BSC, Arbitrum), plus the bridge at bridge.portaldot.dev for POT-denominated feeds.
+- Next: independent reporter operators from the Portaldot community; Kurs reporters as operators of the runtime `Oracle` pallet, so native pallets and contracts read the same prices; a read precompile proposal for the `Oracle` pallet; more chains in the relay (Base, BSC, Arbitrum), plus the bridge at bridge.portaldot.dev for POT-denominated feeds.
 
 ## Prior work and third-party code
 
