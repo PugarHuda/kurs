@@ -1,5 +1,5 @@
 // Everything the page shows is read in the browser from public RPCs. No backend.
-import { createPublicClient, defineChain, http, parseAbiItem, type Address, type Hex } from "viem";
+import { createPublicClient, defineChain, http, parseAbiItem, type Address, type Hex, type PublicClient } from "viem";
 import { foundry, sepolia } from "viem/chains";
 import { kursOracleAbi } from "../../reporter/src/abi";
 import { FEEDS, feedId, type FeedConfig } from "../../reporter/src/feeds";
@@ -33,8 +33,21 @@ export const NETWORKS = {
 
 export const SUBSTRATE_RPC = "https://test-node-v3.portaldot.dev";
 
-export const clientFor = (d: Deployment) =>
-  createPublicClient({ chain: NETWORKS[d.chain].chain, transport: http(NETWORKS[d.chain].rpc) });
+// One client per network, with JSON-RPC batching: a page load sends a handful of
+// HTTP requests instead of one per call, which keeps public RPCs from rate-limiting
+// the browser (their error responses carry no CORS header and surface as CORS errors).
+const clients = new Map<string, PublicClient>();
+export const clientFor = (d: Deployment) => {
+  let c = clients.get(d.chain);
+  if (!c) {
+    c = createPublicClient({
+      chain: NETWORKS[d.chain].chain,
+      transport: http(NETWORKS[d.chain].rpc, { batch: { batchSize: 25, wait: 20 }, retryCount: 3, retryDelay: 400 }),
+    }) as PublicClient;
+    clients.set(d.chain, c);
+  }
+  return c;
+};
 
 export interface RoundEvent {
   pair: string;

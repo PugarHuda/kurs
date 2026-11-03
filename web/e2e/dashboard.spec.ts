@@ -88,3 +88,13 @@ test("no serious accessibility violations", async ({ page }) => {
   const serious = res.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
   expect(serious.map((v) => `${v.id}: ${v.nodes.length} node(s) ${v.nodes[0]?.target}`)).toEqual([]);
 });
+
+test("Portaldot V3: live rounds, verified in the browser, linked to the Node Console", async ({ page }) => {
+  await page.goto("/?net=portaldot&feed=ETH%2FUSD");
+  await expect(page.locator("#board-meta")).toContainText(/Portaldot V3 testnet, block [\d,]+, quorum 3 of 5/);
+  const leds = await page.locator("#board-body td.led").allInnerTexts();
+  expect(leds.filter((v) => Number(v) > 0).length).toBeGreaterThanOrEqual(9);
+  await expect(page.locator("#verify")).toContainText("Verified in your browser.");
+  await expect(page.locator(".facts a").first()).toHaveAttribute("href", /node-console\.portaldot\.dev\/.*#\/explorer\/query\/\d+/);
+  await expect(page.locator("#parity table tbody tr")).toHaveCount(2);
+});
