@@ -351,8 +351,12 @@ async function renderGovernance(d: Deployment) {
     const owner = await ownerOf(d);
     const g = d.governance;
     if (g && owner.toLowerCase() === g.h160.toLowerCase()) {
-      el.innerHTML = `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is a <strong>native Portaldot ${g.threshold}-of-${g.signatories.length} multisig</strong> (pallet-multisig), not a single key. Changing feeds, reporters or ownership takes ${g.threshold} Substrate signatures, executed into the EVM contract through <code>revive.call</code>.</p>
-        <p class="muted">Multisig <code>${esc(short(g.account))}</code>, Revive address <code>${esc(short(g.h160))}</code>.</p>`;
+      const native = g.type.startsWith("pallet-multisig");
+      el.innerHTML = native
+        ? `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is a <strong>native Portaldot ${g.threshold}-of-${g.signatories.length} multisig</strong> (pallet-multisig), not a single key. Changing feeds, reporters or ownership takes ${g.threshold} Substrate signatures, executed into the EVM contract through <code>revive.call</code>.</p>
+        <p class="muted">Multisig <code>${esc(short(g.account))}</code>, Revive address <code>${esc(short(g.h160))}</code>.</p>`
+        : `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is a <strong>${g.threshold}-of-${g.signatories.length} Safe</strong>, not a single key. Changing feeds, reporters or ownership takes ${g.threshold} owner signatures on a Safe transaction.</p>
+        <p class="muted">Safe ${link(d, "addr", g.account)}.</p>`;
     } else {
       el.innerHTML = `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is <code>${esc(short(owner))}</code>, a single deployer key.</p>`;
     }

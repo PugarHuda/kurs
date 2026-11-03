@@ -277,7 +277,7 @@ td.move {
   color: var(--down);
 }
 .flat {
-  color: #8496ae;
+  color: #aebdd0; /* passes 4.5:1 on the board and on the selected row */
 }
 
 td.age {

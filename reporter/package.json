@@ -22,6 +22,7 @@
   "devDependencies": {
     "@polkadot/api": "^17.0.2",
     "@polkadot/keyring": "^14.0.3",
+    "@safe-global/protocol-kit": "^8.0.11",
     "@types/node": "^26.6.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

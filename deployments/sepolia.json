@@ -50,8 +50,22 @@
     "setFeed tPOT/pUSD": "0xd825916921744a84228b7c7c1b63680684dc8620d22aa9e4469734ed38b45787",
     "aggregator tPOT/pUSD": "0x92137241899a09c9bb186993dc933d48236ea7220e49bc784059a634ab74ecaf",
     "deployConverter": "0x877f05e149383dc4d13381812a469c777f2181373bc3818ac8eb2b611fd3f1c1",
-    "erc7412 pull-convert (Multicall3: fulfillOracleQuery + convert)": "0x9e2aa23575734bba9b24b2ea6d25e9fc414a9b18cf2c3f64e323c3e9b17c405f"
+    "erc7412 pull-convert (Multicall3: fulfillOracleQuery + convert)": "0x9e2aa23575734bba9b24b2ea6d25e9fc414a9b18cf2c3f64e323c3e9b17c405f",
+    "erc7412 pull via hosted bundle API (/api/bundle) + Multicall3": "0x9c14d79228585b3447d01fb26d6471bce6534ec4321aa06306871923e9bd00d9",
+    "transferOwnership(safe)": "0xfbab08bba8f95a01aa2be23fbe82e2d66165d5f021086b416824813ff7979268",
+    "Safe execTransaction(acceptOwnership)": "0xbc6efd9b0e2b5fd38c20d6facfc66c717b612234cacf422c29b7e12981c522dd"
   },
   "deployedAt": "2026-11-02T17:20:23.108Z",
-  "converter": "0xa8268109f331dd0b219d424c91c5d3e06c490877"
+  "converter": "0xa8268109f331dd0b219d424c91c5d3e06c490877",
+  "governance": {
+    "type": "Safe 2-of-3 (Safe{Core} protocol-kit)",
+    "threshold": 2,
+    "signatories": [
+      "0x36FC83163A4C08a18bEFb443aaAF9AeF07b6Cf53",
+      "0x554083567A564BA122593A302F61d920aCe7D8c4",
+      "0x8527A67721Fa8CE5607C2F6948c372829ac42Ff6"
+    ],
+    "account": "0x1036B446bBbbe0d0973cD7Bd57FD274Fd76dFf36",
+    "h160": "0x1036B446bBbbe0d0973cD7Bd57FD274Fd76dFf36"
+  }
 }

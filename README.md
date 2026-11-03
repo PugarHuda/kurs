@@ -225,6 +225,8 @@ What the tests cover: median of odd and even sets, a 2-of-5 lying minority canno
 
 On Portaldot V3, `KursOracle.owner()` is not a key: it is a **2-of-3 `pallet-multisig` account**. `reporter/scripts/multisig-owner.ts` did the handoff on chain: signer A funded the multisig account, the deployer called `transferOwnership(<multisig's Revive address>)`, then `multisig.asMulti` wrapped `utility.batchAll[revive.mapAccount, revive.call(acceptOwnership)]`, approved by A and executed by B. From now on, adding a feed, rotating reporters or moving ownership takes two Substrate signatures that reach the EVM contract through `revive.call`. The dashboard's "Who can change Kurs here" panel reads `owner()` live; the extrinsics are in [`docs/evidence.md`](docs/evidence.md).
 
+On Ethereum Sepolia the same role belongs to a **2-of-3 Safe** (`reporter/scripts/safe-owner.ts`, Safe{Core} protocol-kit): the Safe was deployed, the deployer proposed it, and two Safe owners signed `acceptOwnership`. No Kurs deployment is owned by a single key any more.
+
 ## Operations
 
 - **Relay**: `.github/workflows/relay.yml` runs hourly and keeps `kurs run` alive for 57 minutes (a round check every 2 minutes), pushing to Portaldot (slot-aligned) and mirroring the identical bundle to Sepolia. A plain `*/10` cron fired once in two hours on this repo, so the loop design is deliberate.
@@ -232,7 +234,7 @@ On Portaldot V3, `KursOracle.owner()` is not a key: it is a **2-of-3 `pallet-mul
 
 ## Security model and limits
 
-- **Trust**: the reporter set and its strict-majority quorum. A minority cannot move the median and cannot forge a round. On Portaldot the owner (who can rotate reporters and change feed parameters) is the native 2-of-3 multisig above; on Sepolia it is still the deployer key.
+- **Trust**: the reporter set and its strict-majority quorum. A minority cannot move the median and cannot forge a round. The owner (who can rotate reporters and change feed parameters) is a 2-of-3 multisig on both networks: native pallet-multisig on Portaldot, a Safe on Sepolia.
 - **Transmitter**: untrusted. It can only choose *when* to submit, and it re-checks everything off chain so one bad reporter cannot make a bundle revert.
 - **Today's reporters** are five keys run by the Kurs team. The protocol is built for independent operators (`kurs serve` plus `KURS_REPORTER_URLS`), and reporter rotation is one owner transaction.
 - **Equities** come from three free public quotes (Yahoo, Nasdaq, TradingView) with a two-source minimum; they are 15-minute delayed outside real-time hours. A licensed real-time feed is the mainnet upgrade.

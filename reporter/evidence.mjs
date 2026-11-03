@@ -54,8 +54,12 @@ for (const d of deployments) {
     md += `\n### Governance: ${g.type}\n\n`;
     md += `\`owner()\` read live: \`${owner}\` ${isMs ? "**= the multisig account**" : "(not the multisig)"}. `;
     md += `Changing feeds, reporters or ownership needs ${g.threshold} of ${g.signatories.length} Substrate signers: ${g.signatories.map((s) => `\`${s}\``).join(", ")}. `;
-    md += `Multisig account \`${g.account}\`, its Revive address \`${g.h160}\`.\n\n| Step | Extrinsic |\n|---|---|\n`;
-    for (const [what, t] of Object.entries(g.substrateTxs)) md += `| ${what} | ${t.block ? `[\`${short(t.hash)}\`](${block(t.block)})` : `\`${short(t.hash)}\``} |\n`;
+    if (g.substrateTxs) {
+      md += `Multisig account \`${g.account}\`, its Revive address \`${g.h160}\`.\n\n| Step | Extrinsic |\n|---|---|\n`;
+      for (const [what, t] of Object.entries(g.substrateTxs)) md += `| ${what} | ${t.block ? `[\`${short(t.hash)}\`](${block(t.block)})` : `\`${short(t.hash)}\``} |\n`;
+    } else {
+      md += `Safe ${cell(n.addr(g.account), g.account)} (also in the Safe app: https://app.safe.global/home?safe=sep:${g.account}). The handoff transactions are listed below.\n`;
+    }
   } else if (owner) {
     md += `\n\`owner()\`: \`${owner}\`\n`;
   }
