@@ -118,8 +118,8 @@ Revive charges a storage deposit per byte of code and per storage item (`deposit
 |---|---|---|
 | BTC/USD, ETH/USD | Binance, Coinbase, Kraken, OKX, CoinGecko, CoinPaprika, DefiLlama, **Chainlink (Sepolia)** | 50 bps deviation, 1 h heartbeat |
 | DOT/USD, USDT/USD | exchanges + aggregators | |
-| **USD/IDR** | open.er-api, Yahoo FX, CoinGecko (USDT/IDR) | for Rupiah apps |
-| TSLA, NVDA, AAPL, AMZN, META /USD | Yahoo | the tokenised stocks that already trade on Portaldot |
+| **USD/IDR** | open.er-api, Yahoo FX, CoinGecko (USDT/IDR), Frankfurter (ECB reference rate), fawazahmed0 currency-api | for Rupiah apps |
+| TSLA, NVDA, AAPL, AMZN, META /USD | Yahoo, Nasdaq quote API, TradingView scanner; a reporter needs at least 2 | the tokenised stocks that already trade on Portaldot |
 | **tPOT/pUSD** | Portaldot `pallet-asset-conversion`, median of 5 quotes 50 blocks apart, thin pools refused | native Portaldot price, exportable |
 
 A reporter abstains on a feed when fewer than `minSources` answer, and drops any source more than 5% from the others.
@@ -235,7 +235,7 @@ On Portaldot V3, `KursOracle.owner()` is not a key: it is a **2-of-3 `pallet-mul
 - **Trust**: the reporter set and its strict-majority quorum. A minority cannot move the median and cannot forge a round. On Portaldot the owner (who can rotate reporters and change feed parameters) is the native 2-of-3 multisig above; on Sepolia it is still the deployer key.
 - **Transmitter**: untrusted. It can only choose *when* to submit, and it re-checks everything off chain so one bad reporter cannot make a bundle revert.
 - **Today's reporters** are five keys run by the Kurs team. The protocol is built for independent operators (`kurs serve` plus `KURS_REPORTER_URLS`), and reporter rotation is one owner transaction.
-- **Equities** come from one public source (Yahoo). A paid market-data feed is needed before mainnet.
+- **Equities** come from three free public quotes (Yahoo, Nasdaq, TradingView) with a two-source minimum; they are 15-minute delayed outside real-time hours. A licensed real-time feed is the mainnet upgrade.
 - **tPOT/pUSD** comes from one AMM. It is sampled across about 20 minutes of blocks and rejects pools under 100 pUSD; the testnet pool holds about 127 pUSD.
 - Not audited.
 

@@ -12,6 +12,10 @@ export type SourceId =
   | "chainlink-sepolia"
   | "yahoo"
   | "er-api"
+  | "frankfurter"
+  | "fawaz-fx"
+  | "nasdaq"
+  | "tradingview"
   | "portaldot-assetconversion";
 
 export interface FeedConfig {
@@ -120,7 +124,7 @@ export const FEEDS: FeedConfig[] = [
     minAnswer: d8(1_000),
     maxAnswer: d8(100_000),
     minSources: 2,
-    sources: { "er-api": "IDR", yahoo: "IDR=X", coingecko: "tether:idr" },
+    sources: { "er-api": "IDR", yahoo: "IDR=X", coingecko: "tether:idr", frankfurter: "IDR", "fawaz-fx": "idr" },
   },
   // Tokenised stocks already trade in AssetConversion pools on Portaldot V3
   // (TSLA, NVDA, AAPL, AMZN, META against DUCAT) with no reference price.
@@ -134,8 +138,8 @@ export const FEEDS: FeedConfig[] = [
       maxSpreadBps: 100,
       minAnswer: d8(1),
       maxAnswer: d8(100_000),
-      minSources: 1, // one public equity source; see README "Limits"
-      sources: { yahoo: s },
+      minSources: 2, // three independent public quotes; a reporter abstains if fewer than two answer
+      sources: { yahoo: s, nasdaq: s, tradingview: `NASDAQ:${s}` },
     }),
   ),
   // Native Portaldot price: tPOT quoted in pUSD by the runtime's own DEX

@@ -6,6 +6,11 @@ import type { SourceId } from "./feeds.js";
 type Fetcher = (symbol: string) => Promise<number>;
 
 const UA = { "user-agent": "kurs-reporter/0.1 (+https://github.com/PugarHuda/kurs)" };
+// Some public market-data endpoints only answer browser-like clients.
+const BROWSER_UA = {
+  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140 Safari/537.36",
+  accept: "application/json, text/plain, */*",
+};
 
 async function getJson(url: string, init?: RequestInit): Promise<any> {
   const res = await fetch(url, { ...init, headers: { ...UA, ...init?.headers }, signal: AbortSignal.timeout(8_000) });
@@ -143,5 +148,26 @@ export const SOURCES: Record<SourceId, Fetcher> = {
     return num(r.chart?.result?.[0]?.meta?.regularMarketPrice);
   },
   "er-api": async (s) => num((await getJson("https://open.er-api.com/v6/latest/USD")).rates?.[s]),
+  // ECB reference rates (published once per working day)
+  frankfurter: async (s) => num((await getJson(`https://api.frankfurter.dev/v1/latest?base=USD&symbols=${s}`)).rates?.[s]),
+  // fawazahmed0/currency-api on jsDelivr: units per 1 USD. "idr" -> IDR per USD; "inv:btc" -> USD per BTC
+  "fawaz-fx": async (s) => {
+    const usd = (await getJson("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json")).usd;
+    return s.startsWith("inv:") ? num(1 / num(usd?.[s.slice(4)])) : num(usd?.[s]);
+  },
+  // Nasdaq's own quote API (15-min delayed outside real-time hours)
+  nasdaq: async (s) => {
+    const r = await getJson(`https://api.nasdaq.com/api/quote/${s}/info?assetclass=stocks`, { headers: BROWSER_UA });
+    return num(String(r.data?.primaryData?.lastSalePrice ?? "").replace(/[$,]/g, ""));
+  },
+  // TradingView's public scanner endpoint, symbol as EXCHANGE:TICKER
+  tradingview: async (s) => {
+    const r = await getJson("https://scanner.tradingview.com/america/scan", {
+      method: "POST",
+      headers: { ...BROWSER_UA, "content-type": "application/json" },
+      body: JSON.stringify({ symbols: { tickers: [s] }, columns: ["close"] }),
+    });
+    return num(r.data?.find((x: { s: string }) => x.s === s)?.d?.[0]);
+  },
   "portaldot-assetconversion": portaldotQuote,
 };
