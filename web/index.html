@@ -69,18 +69,29 @@
         <div id="pools"><p class="muted">Reading pools…</p></div>
       </section>
 
+      <section class="pull" aria-labelledby="pull-title">
+        <h2 id="pull-title">Pull a fresh signed price</h2>
+        <p>Kurs also works the ERC-7412 way: a contract that needs a fresher price reverts with <code>OracleDataRequired</code>, and your client fetches a signed bundle and submits it with the call. Get one here; this page checks every signature before showing it.</p>
+        <form id="pull-form" class="pull-form">
+          <label for="pull-pair">Feed</label>
+          <select id="pull-pair"></select>
+          <button type="submit">Get signed bundle</button>
+        </form>
+        <div id="pull-out" aria-live="polite"></div>
+      </section>
+
       <section class="use" aria-labelledby="use-title">
         <h2 id="use-title">Read a feed from your contract</h2>
         <div class="code-grid">
           <figure>
             <figcaption>Solidity, unchanged Chainlink interface</figcaption>
-            <pre><code>AggregatorV3Interface feed = AggregatorV3Interface(KURS_USD_IDR);
+            <pre tabindex="0"><code>AggregatorV3Interface feed = AggregatorV3Interface(KURS_USD_IDR);
 (, int256 rate, , uint256 updatedAt, ) = feed.latestRoundData();
 require(block.timestamp - updatedAt &lt; 1 hours, "stale");</code></pre>
           </figure>
           <figure>
             <figcaption>ink! v6, Solidity-ABI call into KursOracle</figcaption>
-            <pre><code>#[ink::contract_ref(abi = "sol")]
+            <pre tabindex="0"><code>#[ink::contract_ref(abi = "sol")]
 pub trait KursOracle {
     #[ink(message, name = "latestRound")]
     fn latest_round(&amp;self, feed: FixedBytes&lt;32&gt;) -&gt; (u128, i128, u64, u64);

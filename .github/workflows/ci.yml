@@ -32,3 +32,15 @@ jobs:
           node-version: 22
       - run: npm ci --prefix ../reporter && npm ci && npm run build
         working-directory: web
+
+  web-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --prefix ../reporter && npm ci && npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npx playwright test
+        working-directory: web

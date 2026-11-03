@@ -246,7 +246,7 @@ main,
   display: block;
   font-weight: 400;
   font-size: 0.8125rem;
-  color: #8496ae;
+  color: #aebdd0; /* 4.5:1 on the board and on the selected (amber-tinted) row */
 }
 
 td.led {
@@ -605,4 +605,86 @@ td.bad {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* ------------------------------------------------------------ verification + pull */
+
+.verify {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.verify p,
+#pull-out p {
+  margin: 0 0 0.6rem;
+  max-width: 70ch;
+}
+
+table.sigs td:first-child {
+  white-space: nowrap;
+}
+
+.pull {
+  margin-top: 3.5rem;
+}
+
+.pull > p {
+  max-width: 70ch;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+
+.pull-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.pull-form select,
+.pull-form button {
+  font: inherit;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-small);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.pull-form button {
+  background: var(--board);
+  color: var(--led);
+  border-color: var(--board);
+  cursor: pointer;
+}
+
+.pull-form button:focus-visible,
+.pull-form select:focus-visible {
+  outline: 3px solid var(--led);
+  outline-offset: 2px;
+}
+
+.payload {
+  display: block;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.payload textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.3rem;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.75rem;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  padding: 0.5rem;
+  color: var(--ink);
+}
+
+.bad-text {
+  color: var(--red);
 }

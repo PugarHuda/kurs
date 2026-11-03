@@ -16,3 +16,5 @@ deployments/local.json
 
 .vercel
 contracts/out-pvm/
+web/test-results/
+web/playwright-report/

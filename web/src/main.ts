@@ -1,7 +1,10 @@
 import "./style.css";
 import type { Address, Hex } from "viem";
 import { FEEDS } from "../../reporter/src/feeds";
+import { FEEDS as ALL_FEEDS } from "../../reporter/src/feeds";
+import { verifyBundlePayload, verifyRound, type CheckedObservation } from "./verify";
 import {
+  clientFor,
   DEPLOYMENTS,
   NETWORKS,
   oracleOperatorCount,
@@ -155,6 +158,7 @@ function renderDetail(s: Snapshot) {
         <h3>Reporters sign their own number</h3>
         <p>EIP-712, no chain id in the domain, so the same signature is valid on every chain running Kurs.</p>
         <ul class="reporters">${reporters}</ul>
+        <div id="verify" class="verify" aria-live="polite">${ev ? "Checking every signature of this round in your browser…" : ""}</div>
       </li>
       <li>
         <h3>KursOracle takes the median</h3>
@@ -172,6 +176,80 @@ function renderDetail(s: Snapshot) {
       </li>
     </ol>`;
   renderParity(f);
+  if (ev) void runVerify(s, f, ev);
+}
+
+function obsTable(obs: CheckedObservation[], decimals: number, d?: Deployment) {
+  return `<table class="plain sigs">
+    <thead><tr><th scope="col">Recovered signer</th><th scope="col">Signed answer</th><th scope="col">Observed (UTC)</th><th scope="col">In reporter set</th></tr></thead>
+    <tbody>${obs
+      .map(
+        (o) => `<tr>
+          <td>${d ? link(d, "addr", o.signer) : `<code>${short(o.signer)}</code>`}</td>
+          <td>${fmt(o.answer, decimals)}</td>
+          <td>${new Date(o.observedAt * 1000).toISOString().slice(11, 19)}</td>
+          <td class="${o.isReporter ? "" : "bad"}">${o.isReporter ? "yes" : "no"}</td>
+        </tr>`,
+      )
+      .join("")}</tbody></table>`;
+}
+
+let verifySeq = 0;
+async function runVerify(s: Snapshot, f: FeedState, ev: FeedState["history"][number]) {
+  const seq = ++verifySeq;
+  const el = () => document.querySelector<HTMLElement>("#verify");
+  try {
+    const v = await verifyRound(clientFor(s.deployment), s.deployment.oracle, ev.txHash, s.reporters);
+    if (seq !== verifySeq || !el()) return;
+    const allIn = v.observations.every((o) => o.isReporter);
+    const same = v.median === ev.answer && v.roundId === ev.roundId;
+    el()!.innerHTML = `
+      <p><strong>${same && allIn ? "Verified in your browser." : "Verification failed."}</strong>
+      Decoded ${v.observations.length} signed observations from the transaction (${esc(v.path)}),
+      recovered each signer with EIP-712, and recomputed the median:
+      <strong>${fmt(v.median, f.feed.decimals)}</strong> ${same ? "equals" : "does not equal"} the on-chain answer.</p>
+      ${obsTable(v.observations, f.feed.decimals, s.deployment)}`;
+  } catch (e) {
+    if (seq === verifySeq && el()) el()!.innerHTML = `<p class="muted">Could not verify this round: ${esc((e as Error).message.split("\n")[0])}.</p>`;
+  }
+}
+
+// ------------------------------------------------------------------ pull (ERC-7412)
+
+function renderPull() {
+  const sel = document.querySelector<HTMLSelectElement>("#pull-pair");
+  if (!sel || sel.options.length) return;
+  sel.innerHTML = ALL_FEEDS.map((f) => `<option${f.pair === "USD/IDR" ? " selected" : ""}>${esc(f.pair)}</option>`).join("");
+  document.querySelector<HTMLFormElement>("#pull-form")!.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const out = document.querySelector<HTMLElement>("#pull-out")!;
+    const pair = sel.value;
+    const feed = ALL_FEEDS.find((x) => x.pair === pair)!;
+    out.innerHTML = `<p class="muted">Asking the bundle API for a signed ${esc(pair)} round…</p>`;
+    try {
+      const r = await fetch(`/api/bundle?pair=${encodeURIComponent(pair)}`);
+      const isJson = (r.headers.get("content-type") ?? "").includes("application/json");
+      if (!isJson) {
+        throw new Error(
+          "The bundle API is not served by this host (it runs as a serverless function on the Vercel deployment). Use the CLI: kurs pull-convert.",
+        );
+      }
+      const body = await r.json();
+      if (!r.ok) throw new Error(`Bundle API: ${body.error ?? `answered ${r.status}`}`);
+      if (typeof body.payload !== "string" || !body.payload.startsWith("0x")) throw new Error("Bundle API returned no payload.");
+      const reporters = last?.reporters ?? body.reporters;
+      const v = await verifyBundlePayload(body.payload, reporters);
+      const ok = v.observations.every((o) => o.isReporter);
+      out.innerHTML = `
+        <p><strong>${ok ? "Every signature checks out against the on-chain reporter set." : "Some signers are not in the reporter set."}</strong>
+        Round ${v.roundId}, median ${fmt(v.median, feed.decimals)}. Pass this payload to <code>KursOracle.fulfillOracleQuery</code> on any chain running Kurs.</p>
+        ${obsTable(v.observations, feed.decimals)}
+        <label class="payload">ERC-7412 payload (${(body.payload.length - 2) / 2} bytes)
+          <textarea readonly rows="3">${esc(body.payload)}</textarea></label>`;
+    } catch (err) {
+      out.innerHTML = `<p class="bad-text">${esc((err as Error).message)}</p>`;
+    }
+  });
 }
 
 // ------------------------------------------------------------------ parity
@@ -308,6 +386,7 @@ async function boot() {
     return;
   }
   renderNetworks();
+  renderPull();
   await refresh();
   void renderPools(last!);
   void refreshOthers();

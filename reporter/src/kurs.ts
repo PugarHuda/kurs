@@ -22,16 +22,8 @@ export type ChainKey = keyof typeof CHAINS;
 
 // ------------------------------------------------------------------ EIP-712
 
-/** Must match KursOracle: name/version only, no chainId — the bundle is chain-portable. */
-export const DOMAIN = { name: "Kurs", version: "1" } as const;
-export const TYPES = {
-  Observation: [
-    { name: "feedId", type: "bytes32" },
-    { name: "roundId", type: "uint80" },
-    { name: "answer", type: "int192" },
-    { name: "observedAt", type: "uint64" },
-  ],
-} as const;
+export { DOMAIN, TYPES } from "./eip712.js";
+import { DOMAIN, TYPES } from "./eip712.js";
 
 export interface SignedObservation {
   reporter: Address;
