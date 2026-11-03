@@ -11,7 +11,7 @@ Portaldot Hacker House 2026 · Track: **Multi-Chain & Cross-Chain Infra**
 | Network | KursOracle | Status |
 |---|---|---|
 | Ethereum Sepolia | [`0xd3f6bf8e…a2cbc3`](https://sepolia.etherscan.io/address/0xd3f6bf8e595e815de11598f23170b37341a2cbc3) | live: 11 feeds pushed by the relay, ERC-7412 pull used on chain, oracle + factory + converter verified on Sourcify (exact match) |
-| Portaldot V3 testnet | see [`deployments/`](deployments/) | deploying: waiting on testnet tPOT for Revive storage deposits (about 1,900 tPOT) |
+| **Portaldot V3 testnet** | `0x5bdd9713ddc4f11e14bd3094882401cd122656f4` ([round in the Node Console](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/299579)) | **live: 11 feeds, rounds from 5 reporters every ~64 min, mirrored unchanged to Sepolia** |
 
 ![Kurs architecture](docs/architecture.png)
 
@@ -200,7 +200,9 @@ Instantiate with `new(oracle, keccak256("USD/IDR"), 3600)`, then call `quote(100
 
 Contract addresses, every transaction hash, and the reporter set are in [`deployments/`](deployments/) and summarised in [`docs/evidence.md`](docs/evidence.md) (regenerate with `cd reporter && npm run evidence`).
 
-Measured on V3 before deploying: `eth_estimateGas` for `KursOracle` comes to about 711 tPOT, almost all of it the code storage deposit (0.06 tPOT per byte plus a 30% code-hash lockup). The ink! contract (11.6 KB of PolkaVM code) is about 900 tPOT. These deposits are refundable when code is removed.
+Deploying the oracle, factory, 11 feeds and KursConverter cost about 1,575 tPOT, almost all of it Revive storage deposit (0.06 tPOT per byte of code plus a 30% code-hash lockup, 0.15 tPOT per storage item); deposits are refundable when code or storage is removed. The ink! KursRemit (11.6 KB of PolkaVM code, about 900 tPOT) is verified cross-VM on a local pallet-revive node and is the next deployment.
+
+**Relaying on Revive economically.** `reporter/scripts/deposit-probe.ts` measures a `transmit` on Portaldot: **7.91 tPOT** when the round opens a new ring-buffer slot, **0.107 tPOT** when it overwrites one. On chains marked `SLOT_ALIGNED` the transmitter therefore re-signs the fresh reading at `latest + 64k`, so every round lands on the feed's existing slot. The contract only requires round ids to increase and observations to be fresh, so this is as safe as minute rounds; it caps Portaldot at about one round per 64 minutes per feed, at ~0.1 tPOT each. The same signed bundle is then relayed unchanged to Sepolia, which ends up holding the identical round.
 
 ## Verify it yourself
 
