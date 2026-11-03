@@ -53,7 +53,8 @@
     "erc7412 pull-convert (Multicall3: fulfillOracleQuery + convert)": "0x9e2aa23575734bba9b24b2ea6d25e9fc414a9b18cf2c3f64e323c3e9b17c405f",
     "erc7412 pull via hosted bundle API (/api/bundle) + Multicall3": "0x9c14d79228585b3447d01fb26d6471bce6534ec4321aa06306871923e9bd00d9",
     "transferOwnership(safe)": "0xfbab08bba8f95a01aa2be23fbe82e2d66165d5f021086b416824813ff7979268",
-    "Safe execTransaction(acceptOwnership)": "0xbc6efd9b0e2b5fd38c20d6facfc66c717b612234cacf422c29b7e12981c522dd"
+    "Safe execTransaction(acceptOwnership)": "0xbc6efd9b0e2b5fd38c20d6facfc66c717b612234cacf422c29b7e12981c522dd",
+    "deploy KursQuoteOracle (ERC-7726)": "0x27b60121415e79862eecc75ddeee7b3d8fe71db7c9fa99284743c64ffe842354"
   },
   "deployedAt": "2026-11-02T17:20:23.108Z",
   "converter": "0xa8268109f331dd0b219d424c91c5d3e06c490877",
@@ -67,5 +68,19 @@
     ],
     "account": "0x1036B446bBbbe0d0973cD7Bd57FD274Fd76dFf36",
     "h160": "0x1036B446bBbbe0d0973cD7Bd57FD274Fd76dFf36"
+  },
+  "quoteOracle": "0x787e4f515d1affa6a3dff10ee953f236db90cf30",
+  "aggregatorsV2": {
+    "BTC/USD": "0x927ab856165bc2e54875016e91acbf55e2265d96",
+    "ETH/USD": "0x4637ed364b1d18e30d0f5d83e413101567515626",
+    "DOT/USD": "0xcb1c23cdd51bffc59ab8f25d55312cba6f15eb43",
+    "USDT/USD": "0xcecafeaa07187ffcf73553fc0a989a653d93f861",
+    "USD/IDR": "0x481993b52fe874a0f6e5bb49ce4dedf89476d56a",
+    "TSLA/USD": "0x13c3e57b98a820e13fd417447d84c791000c2979",
+    "NVDA/USD": "0x2b779f1e5d9487f9efb3d4c08e1d6f792fd26111",
+    "AAPL/USD": "0x3ed4792f95de973f375427bac52ba76b817ce55c",
+    "AMZN/USD": "0x23cfb56fbfc5ebdf4e538c2ff6fbbf143de0eae4",
+    "META/USD": "0x78ec9fda671c924e48130eaeef2763679208bd82",
+    "tPOT/pUSD": "0x258a4423a14a4974fafb754b0eee0ee6decb3f39"
   }
 }

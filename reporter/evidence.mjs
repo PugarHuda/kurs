@@ -46,6 +46,9 @@ for (const d of deployments) {
   md += `| KursAggregatorFactory | ${cell(n.addr(d.factory), d.factory)} |\n`;
   if (d.converter) md += `| KursConverter (ERC-7412 pull consumer, USD/IDR) | ${cell(n.addr(d.converter), d.converter)} |\n`;
   if (d.kursRemit) md += `| KursRemit (ink! v6) | ${cell(n.addr(d.kursRemit), d.kursRemit)} |\n`;
+  if (d.quoteOracle) md += `| KursQuoteOracle (ERC-7726 getQuote: BTC, ETH, USD, IDR, pivots through USD) | ${cell(n.addr(d.quoteOracle), d.quoteOracle)} |\n`;
+  if (d.chain === "portaldot")
+    md += `\nThe same prices read through the Substrate runtime API \`ReviveApi_call\` (node WebSocket, no EVM RPC): [/api/substrate](https://kurs-ten-zeta.vercel.app/api/substrate), or \`npx tsx scripts/substrate-read.ts\` in reporter/, which also checks they match the EVM RPC.\n`;
   const owner = await c.readContract({ address: d.oracle, abi: oracleAbi, functionName: "owner" }).catch(() => null);
   if (d.governance) {
     const g = d.governance;
@@ -76,6 +79,14 @@ for (const d of deployments) {
     md += `| ${pair} | ${cell(n.addr(agg), short(agg))} | ${roundId} | ${(Number(answer) / 1e8).toString()} | ${when} |\n`;
   }
 
+  if (d.aggregatorsV2) {
+    md += `\n### Chainlink V2 + V3 aggregators (\`latestAnswer\` for Aave V3's AaveOracle)\n\n| Feed | KursAggregatorV2V3 | latestAnswer() |\n|---|---|---|\n`;
+    const v2 = [{ type: "function", name: "latestAnswer", stateMutability: "view", inputs: [], outputs: [{ type: "int256" }] }];
+    for (const [pair, a] of Object.entries(d.aggregatorsV2)) {
+      const ans = await c.readContract({ address: a, abi: v2, functionName: "latestAnswer" }).catch(() => null);
+      md += `| ${pair} | ${cell(n.addr(a), short(a))} | ${ans === null ? "n/a" : ans.toString()} |\n`;
+    }
+  }
   md += `\n### Transactions\n\n| What | Transaction |\n|---|---|\n`;
   for (const [what, h] of Object.entries(d.txs)) {
     const rc = await c.getTransactionReceipt({ hash: h }).catch(() => null);
@@ -103,7 +114,7 @@ Sepolia contracts are verified on Sourcify with an exact match:
 ${deployments
   .filter((d) => d.chain === "sepolia")
   .map((d) =>
-    [d.oracle, d.factory, d.converter]
+    [d.oracle, d.factory, d.converter, d.quoteOracle, ...Object.values(d.aggregatorsV2 ?? {})]
       .filter(Boolean)
       .map((a) => `- https://repo.sourcify.dev/contracts/full_match/11155111/${a}/`)
       .join("\n"),

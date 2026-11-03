@@ -1,5 +1,9 @@
 # Kurs
 
+[![ci](https://github.com/PugarHuda/kurs/actions/workflows/ci.yml/badge.svg)](https://github.com/PugarHuda/kurs/actions/workflows/ci.yml)
+[![feeds](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fkurs-ten-zeta.vercel.app%2Fapi%2Fhealth&query=%24.ok&label=feeds%20fresh&color=2ea44f)](https://kurs-ten-zeta.vercel.app/api/health)
+[![health](https://github.com/PugarHuda/kurs/actions/workflows/health.yml/badge.svg)](https://github.com/PugarHuda/kurs/actions/workflows/health.yml)
+
 **Price feeds for Portaldot V3, signed by independent reporters, readable from Solidity and ink!, and portable to any EVM chain.**
 
 *Kurs* is Indonesian for "exchange rate", the number on the board at every money changer.
@@ -221,6 +225,18 @@ The cross-VM run deploys KursOracle, transmits a 5-reporter USD/IDR round, deplo
 
 What the tests cover: median of odd and even sets, a 2-of-5 lying minority cannot move the median, duplicate, outsider, tampered and high-s signatures, stale, future and replayed rounds, disagreement and bounds circuit breakers, strict-majority quorum, reporter rotation, two-step ownership, the AggregatorV3 adapter and clones, the ring buffer, **the same bundle verifying on a second chain id**, the viem digest matching the contract formula byte for byte, and off-chain bundle selection under vote spamming, malformed input and coordinated outliers.
 
+## Ways to read Kurs
+
+| Interface | For | Where |
+|---|---|---|
+| `KursOracle.latestRound(feedId)` / `latestRoundFresh(feedId, maxAge)` | any Solidity contract; ERC-7412 pull when stale | both networks |
+| Chainlink **AggregatorV3** (`latestRoundData`), one 45-byte clone per feed | anything built for Chainlink | both networks |
+| Chainlink **V2 + V3** (`latestAnswer`, `getAnswer`, ...) via `KursAggregatorV2V3` | Aave V3's `AaveOracle` and older Compound-style code | Sepolia (11 feeds, Sourcify-verified); Portaldot after the next tPOT top-up |
+| **ERC-7726** `getQuote(amount, base, quote)` via `KursQuoteOracle` | Euler v2 and other modular lenders; BTC, ETH, USD (840), IDR (360), with cross rates through USD (1 BTC in Rupiah) | Sepolia; Portaldot estimate 229 tPOT, deferred so the relay keeps its gas |
+| **Substrate runtime API** `ReviveApi_call` | Polkadot wallets, polkadot.js / PAPI clients, off-chain workers: no EVM RPC needed | Portaldot: [`/api/substrate`](https://kurs-ten-zeta.vercel.app/api/substrate), `reporter/src/substrate.ts` |
+| ink! v6 cross-contract call (Solidity ABI) | ink! contracts on pallet-revive | `ink/kurs_consumer` |
+| HTTP: `/api/feeds`, `/api/bundle`, `/api/health` | dashboards, ERC-7412 clients, monitors | Vercel |
+
 ## Governance: a native Portaldot multisig owns the oracle
 
 On Portaldot V3, `KursOracle.owner()` is not a key: it is a **2-of-3 `pallet-multisig` account**. `reporter/scripts/multisig-owner.ts` did the handoff on chain: signer A funded the multisig account, the deployer called `transferOwnership(<multisig's Revive address>)`, then `multisig.asMulti` wrapped `utility.batchAll[revive.mapAccount, revive.call(acceptOwnership)]`, approved by A and executed by B. From now on, adding a feed, rotating reporters or moving ownership takes two Substrate signatures that reach the EVM contract through `revive.call`. The dashboard's "Who can change Kurs here" panel reads `owner()` live; the extrinsics are in [`docs/evidence.md`](docs/evidence.md).
@@ -244,7 +260,7 @@ On Ethereum Sepolia the same role belongs to a **2-of-3 Safe** (`reporter/script
 
 ## Roadmap
 
-- Done during the hacker house: oracle, clones, ring buffer, push relay and ERC-7412 pull, bundle API, 11 feeds, ink! v6 consumer verified cross-VM, dashboard with in-browser signature verification, live on Portaldot V3 and Sepolia with an hourly relay and /api/health, ERC-7412 pull executed on both chains, owner handed to a native 2-of-3 pallet-multisig (Portaldot) and a 2-of-3 Safe (Sepolia), 73 automated tests incl. Foundry invariants over 128k random transmits, Slither in CI with every finding triaged in [docs/security.md](docs/security.md), Lighthouse 100/100/100/100 on mobile.
+- Done during the hacker house: oracle, clones, ring buffer, push relay and ERC-7412 pull, bundle API, 11 feeds, ink! v6 consumer verified cross-VM, dashboard with in-browser signature verification, live on Portaldot V3 and Sepolia with an hourly relay and /api/health, ERC-7412 pull executed on both chains, owner handed to a native 2-of-3 pallet-multisig (Portaldot) and a 2-of-3 Safe (Sepolia), 87 automated tests incl. Foundry invariants over 128k random transmits, Slither in CI with every finding triaged in [docs/security.md](docs/security.md), Lighthouse 100/100/100/100 on mobile.
 - Next: independent reporter operators from the Portaldot community; a time delay on the multisig owner (pallet-proxy announcements); Kurs reporters as operators of the runtime `Oracle` pallet, so native pallets and contracts read the same prices; a read precompile proposal for the `Oracle` pallet; more chains in the relay (Base, BSC, Arbitrum), plus the bridge at bridge.portaldot.dev for POT-denominated feeds.
 
 ## Prior work and third-party code

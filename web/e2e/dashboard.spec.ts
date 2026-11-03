@@ -138,3 +138,13 @@ test("layout shift while the board loads stays under 0.1", async ({ page }) => {
   const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
   expect(cls).toBeLessThan(0.1);
 });
+
+test("/api/substrate reads every feed through ReviveApi_call and agrees with the board", async ({ request }) => {
+  const r = await request.get("/api/substrate", { timeout: 60_000 });
+  expect(r.ok()).toBeTruthy();
+  const body = await r.json();
+  expect(body.via).toContain("ReviveApi_call");
+  expect(body.block).toBeGreaterThan(0);
+  expect(body.feeds).toHaveLength(11);
+  for (const f of body.feeds) expect(Number(f.answer)).toBeGreaterThan(0);
+});
