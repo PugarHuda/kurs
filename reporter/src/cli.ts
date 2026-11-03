@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 import { privateKeyToAccount } from "viem/accounts";
 import type { Hex } from "viem";
 import { FEEDS } from "./feeds.js";
+import { encodeFunctionData, parseEventLogs } from "viem";
+import { kursConverterAbi } from "./abi.js";
 import { configure, deploy, transmit } from "./chain.js";
+import { converterOf, sendWithFreshPrice } from "./pull.js";
 import { CHAINS, fromJson, observeAndSign, readAll, toJson, type ChainKey, type SignedObservation } from "./kurs.js";
 
 const envFile = fileURLToPath(new URL("../../.env", import.meta.url));
@@ -94,6 +97,33 @@ switch (cmd) {
     console.log(JSON.stringify(d, null, 2));
     break;
   }
+  case "pull-convert": {
+    // ERC-7412 demo: convert USD cents to IDR cents at a price no older than the converter's maxAge,
+    // pulling a signed bundle into the same transaction when the stored price is stale.
+    const amount = BigInt(args[0] ?? "10000");
+    const chain = (args[1] ?? "sepolia") as ChainKey;
+    const data = encodeFunctionData({ abi: kursConverterAbi, functionName: "convert", args: [amount] });
+    const res = await sendWithFreshPrice(chain, deployer(), converterOf(chain), data, localReporters());
+    const [ev] = parseEventLogs({ abi: kursConverterAbi, logs: res.receipt.logs, eventName: "Converted" });
+    console.log(
+      JSON.stringify(
+        {
+          chain,
+          pulled: res.pulled
+            ? { pair: res.pulled.pair, roundId: res.pulled.roundId.toString(), from: res.pulled.source }
+            : "price was fresh, no pull needed",
+          batchedInOneTx: res.batched,
+          txs: res.hashes,
+          converted: ev
+            ? { amount: ev.args.amount.toString(), converted: ev.args.converted.toString(), roundId: ev.args.roundId.toString(), price: ev.args.price.toString() }
+            : null,
+        },
+        null,
+        2,
+      ),
+    );
+    break;
+  }
   case "configure":
     await configure((args[0] ?? "portaldot") as ChainKey, deployer());
     break;
@@ -133,5 +163,8 @@ switch (cmd) {
   configure [chain]    sync on-chain feed config with src/feeds.ts
   once                 one round: collect signatures, transmit due feeds to KURS_CHAINS
   run                  loop "once" every KURS_INTERVAL_SECONDS (default 60)
-  serve                run a single reporter over HTTP (REPORTER_PK, PORT)`);
+  serve                run a single reporter over HTTP (REPORTER_PK, PORT)
+  pull-convert [amount] [chain]
+                       ERC-7412 pull: KursConverter.convert(amount) with a signed bundle pulled
+                       into the same transaction when the price is stale (KURS_BUNDLE_URL or local keys)`);
 }
