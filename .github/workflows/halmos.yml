@@ -1,0 +1,23 @@
+name: halmos
+# Symbolic proofs of the median (contracts/test/KursHalmos.t.sol): run when the oracle
+# or the proofs change, and weekly.
+on:
+  push:
+    paths: ["contracts/src/KursOracle.sol", "contracts/test/KursHalmos.t.sol", ".github/workflows/halmos.yml"]
+  workflow_dispatch:
+  schedule:
+    - cron: "41 4 * * 1"
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install halmos==0.3.3
+      - run: halmos --match-contract KursHalmos --loop 6 --solver-timeout-assertion 0
+        working-directory: contracts

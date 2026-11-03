@@ -41,3 +41,17 @@ call it checks:
 
 `afterInvariant` fails the run unless both accepted and rejected bundles occurred.
 Default profile: 256 runs × 500 calls = 128,000 transmits per CI run.
+
+## Symbolic proofs (Halmos)
+
+`contracts/test/KursHalmos.t.sol` runs the oracle's own `_sort` and `_median` on symbolic
+`int192` inputs, so each property holds for every input rather than a fuzzed sample, for
+bundles of 3, 4 and 5 observations (the deployed set is 5 reporters, quorum 3):
+
+- `check_sortN`: the output is ascending and a permutation of the input
+- `check_medianBoundedN`: the median lies between the smallest and largest observation
+- `check_minorityN`: if a strict majority of observations lie in `[lo, hi]`, the median does
+  too, whatever the minority signed (2 of 3, 3 of 4, 3 of 5 honest)
+
+`check_minority3` passed locally (15 paths, 58 s). The full set runs in CI
+(`.github/workflows/halmos.yml`, `halmos --loop 6`); its result is the authoritative one.
