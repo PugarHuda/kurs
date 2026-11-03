@@ -3,10 +3,15 @@ name: halmos
 # or the proofs change, and weekly.
 on:
   push:
+    branches: [main]
     paths: ["contracts/src/KursOracle.sol", "contracts/test/KursHalmos.t.sol", ".github/workflows/halmos.yml"]
   workflow_dispatch:
   schedule:
     - cron: "41 4 * * 1"
+
+concurrency:
+  group: halmos
+  cancel-in-progress: true
 
 jobs:
   prove:
