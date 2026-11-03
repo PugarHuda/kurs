@@ -11,7 +11,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const VIDEO = resolve(ROOT, "docs/video");
 const DECK = pathToFileURL(resolve(ROOT, "docs/deck/index.html")).href;
 const SITE = process.env.KURS_SITE ?? "https://kurs-ten-zeta.vercel.app";
-const PULL_TX = "0x9e2aa23575734bba9b24b2ea6d25e9fc414a9b18cf2c3f64e323c3e9b17c405f";
+// ERC-7412 pull on Sepolia through the hosted /api/bundle, one Multicall3 transaction
+const PULL_TX = "0x9c14d79228585b3447d01fb26d6471bce6534ec4321aa06306871923e9bd00d9";
 const dur = JSON.parse(readFileSync(resolve(VIDEO, "durations.json"), "utf8"));
 const PAD = 0.9; // seconds of air after each line
 
@@ -85,15 +86,15 @@ await scene("s5", async () => {
   await page.evaluate(() => window.scrollBy(0, -80));
 });
 
-// 6: ERC-7412 pull, real command output, then the transaction on Etherscan
+// 6: ERC-7412 pull: real Portaldot run output, then the API-driven Sepolia transaction
 await scene(
   "s6",
   async () => {
     const out = readFileSync(resolve(VIDEO, "pull-convert-output.txt"), "utf8");
-    await terminal("ERC-7412 pull on Sepolia", "npx tsx src/cli.ts pull-convert 10000 sepolia", out);
+    await terminal("ERC-7412 pull on Portaldot V3 (no Multicall3: two transactions)", "npx tsx src/cli.ts pull-convert 10000 portaldot", out);
   },
   async () => {
-    await sleep(8000);
+    await sleep(13500);
     await page.goto(`https://eth-sepolia.blockscout.com/tx/${PULL_TX}`, { waitUntil: "domcontentloaded" }).catch(() => {});
   },
 );
@@ -103,6 +104,24 @@ await scene("s7", async () => {
   const out = readFileSync(resolve(ROOT, "docs/ink-e2e-local.txt"), "utf8").trim();
   await terminal("Cross-VM on pallet-revive: ink! v6 reads the Solidity oracle", "npm run ink-e2e", out);
 });
+
+// 8g: governance panel, read live from owner() on each network
+await scene(
+  "s8g",
+  async () => {
+    await page.goto(`${SITE}/?net=portaldot`, { waitUntil: "load" });
+    await page.locator("#gov").getByText("native Portaldot").waitFor({ timeout: 60_000 });
+    await page.locator("#gov").scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollBy(0, -220));
+  },
+  async () => {
+    await sleep(10500);
+    await page.getByRole("button", { name: "Ethereum Sepolia" }).click();
+    await page.locator("#gov").getByText("2-of-3 Safe").waitFor({ timeout: 30_000 }).catch(() => {});
+    await page.locator("#gov").scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollBy(0, -220));
+  },
+);
 
 // 8: built for Revive, tests, multi-chain
 await scene("s8", () => slide(7));

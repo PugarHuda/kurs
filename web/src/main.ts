@@ -369,6 +369,7 @@ async function refresh() {
   if (!current) return;
   try {
     last = await snapshot(current);
+    others.set(current.chain, last); // kept for parity after the user switches network
     renderBoard(last);
     renderDetail(last);
     void renderGovernance(current);

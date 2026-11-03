@@ -105,3 +105,12 @@ test("governance panel reads the owner: native multisig on Portaldot, a Safe on 
   await page.getByRole("button", { name: "Ethereum Sepolia" }).click();
   await expect(page.locator("#gov")).toContainText("2-of-3 Safe", { timeout: 45_000 });
 });
+
+test("parity still lists both networks after switching to Sepolia", async ({ page }) => {
+  await page.goto("/?net=portaldot&feed=USD%2FIDR");
+  await expect(page.locator("#parity table")).toContainText("Ethereum Sepolia", { timeout: 60_000 });
+  await page.getByRole("button", { name: "Ethereum Sepolia" }).click();
+  await expect(page.locator("#board-body tr[data-pair]").first()).toBeVisible({ timeout: 45_000 });
+  await expect(page.locator("#parity table")).toContainText("Portaldot V3", { timeout: 45_000 });
+  await expect(page.locator("#parity")).not.toContainText("one network so far");
+});

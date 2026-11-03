@@ -1,16 +1,14 @@
-simulate KursConverter.convert(10000)  ->  reverted OracleDataRequired(oracle, USD/IDR, maxAge 300)
-fetch signed bundle: 5 reporters, round 29894435
-send Multicall3.aggregate3([fulfillOracleQuery(payload), convert(10000)])
-
 {
-  "chain": "sepolia",
-  "pulled": { "pair": "USD/IDR", "roundId": "29894435", "from": "local" },
-  "batchedInOneTx": true,
-  "txs": [ "0x9e2aa23575734bba9b24b2ea6d25e9fc414a9b18cf2c3f64e323c3e9b17c405f" ],
+  "chain": "portaldot",
+  "pulled": { "pair": "USD/IDR", "roundId": "29894576", "from": "local" },
+  "batchedInOneTx": false,
+  "txs": [
+    "0x1220a94327565743760bd238a0929e1014e91ed77dff605526de8a1fa84429f6",   fulfillOracleQuery
+    "0x2a0fe924826fc78c8471bc9ed99afa295b86a761b20feb793cf9d435851bedcf"    convert
+  ],
   "converted": {
-    "amount": "10000",          USD 100.00
-    "converted": "181527069",   IDR 1,815,270.69
-    "roundId": "29894435",
-    "price": "1815270693250"
+    "amount": "10000",          $100.00
+    "converted": "181448994",   Rp 1,814,489.94
+    "price": "1814489942400"
   }
 }
