@@ -54,6 +54,8 @@ export interface FeedReading {
   readings: SourceReading[];
   /** median of the sources that answered, scaled to feed decimals; undefined = abstain */
   answer?: bigint;
+  /** unix seconds when the sources answered; signatures must not claim a later time */
+  observedAt?: number;
 }
 
 export function median(xs: number[]): number {
@@ -87,7 +89,7 @@ export async function readFeed(feed: FeedConfig): Promise<FeedReading> {
   );
   const prices = trimOutliers(readings.flatMap((r) => (r.price === undefined ? [] : [r.price])));
   const answer = prices.length >= feed.minSources ? scale(median(prices), feed.decimals) : undefined;
-  return { feed, readings, answer };
+  return { feed, readings, answer, observedAt: Math.floor(Date.now() / 1000) };
 }
 
 export const readAll = (feeds = FEEDS) => Promise.all(feeds.map(readFeed));
@@ -124,10 +126,11 @@ export async function sign(
 /** One reporter's view of one tick: sign every feed it could price. */
 export async function observeAndSign(account: LocalAccount, readings: FeedReading[], now = Date.now() / 1000) {
   const roundId = roundOf(now);
-  const observedAt = BigInt(Math.floor(now));
   const out: SignedObservation[] = [];
   for (const r of readings) {
     if (r.answer === undefined) continue;
+    // sign the time the sources answered, not the (possibly later) signing time
+    const observedAt = BigInt(Math.floor(Math.min(r.observedAt ?? now, now)));
     out.push(await sign(account, r.feed.pair, roundId, r.answer, observedAt));
   }
   return out;

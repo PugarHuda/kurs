@@ -84,12 +84,15 @@ const print = (r: TransmitResult) => {
 async function tick() {
   const { obs, readings } = await collect();
   const keys = localReporters();
-  // slot-aligned chains may need the same reading signed at another round id
+  // Slot-aligned chains may need the same reading signed at another round id. The
+  // signature keeps the time the sources answered (never "now"), and a reading older
+  // than RESIGN_MAX_AGE is not re-signed, so a slow tick cannot make old data look fresh.
+  const RESIGN_MAX_AGE = 120;
   const resign = async (pair: string, roundId: bigint) => {
     const r = readings.find((x) => x.feed.pair === pair);
-    if (!r?.answer) return [];
-    const at = BigInt(Math.floor(Date.now() / 1000));
-    return Promise.all(keys.map((k) => sign(k, pair, roundId, r.answer!, at)));
+    if (!r?.answer || r.observedAt === undefined) return [];
+    if (Math.floor(Date.now() / 1000) - r.observedAt > RESIGN_MAX_AGE) return [];
+    return Promise.all(keys.map((k) => sign(k, pair, roundId, r.answer!, BigInt(r.observedAt!))));
   };
   const chains = chainsFromEnv().sort((a, b) => Number(!!SLOT_ALIGNED[b]) - Number(!!SLOT_ALIGNED[a]));
   const mirrored: SignedObservation[][] = [];

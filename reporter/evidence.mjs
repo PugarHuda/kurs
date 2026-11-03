@@ -9,8 +9,9 @@ const NETS = {
   portaldot: {
     label: "Portaldot V3 testnet",
     rpc: "https://test-evm-rpc-v3.portaldot.dev",
-    tx: (h) => `https://scanner-testnet-v3.portaldot.dev/tx/${h}`,
-    addr: (a) => `https://scanner-testnet-v3.portaldot.dev/addresses/${a}`,
+    // the Substrate explorer does not resolve EVM hashes or H160s: link the block in the Node Console
+    tx: (h, block) => `https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/${block}`,
+    addr: () => null,
   },
   sepolia: {
     label: "Ethereum Sepolia",
@@ -21,6 +22,8 @@ const NETS = {
 };
 
 const short = (x) => `${x.slice(0, 10)}…${x.slice(-6)}`;
+/** markdown cell: a link when the network has an explorer for it, plain code otherwise */
+const cell = (url, text) => (url ? `[\`${text}\`](${url})` : `\`${text}\``);
 const deployments = readdirSync("../deployments")
   .filter((f) => f.endsWith(".json") && !f.startsWith("local"))
   .map((f) => JSON.parse(readFileSync(`../deployments/${f}`, "utf8")))
@@ -39,11 +42,11 @@ for (const d of deployments) {
   const c = createPublicClient({ transport: http(n.rpc) });
   md += `## ${n.label} (chain id ${d.chainId})\n\n`;
   md += `| Contract | Address |\n|---|---|\n`;
-  md += `| KursOracle | [\`${d.oracle}\`](${n.addr(d.oracle)}) |\n`;
-  md += `| KursAggregatorFactory | [\`${d.factory}\`](${n.addr(d.factory)}) |\n`;
-  if (d.converter) md += `| KursConverter (ERC-7412 pull consumer, USD/IDR) | [\`${d.converter}\`](${n.addr(d.converter)}) |\n`;
-  if (d.kursRemit) md += `| KursRemit (ink! v6) | [\`${d.kursRemit}\`](${n.addr(d.kursRemit)}) |\n`;
-  md += `\nReporters (quorum ${d.quorum} of ${d.reporters.length}): ${d.reporters.map((r) => `[\`${short(r)}\`](${n.addr(r)})`).join(", ")}\n\n`;
+  md += `| KursOracle | ${cell(n.addr(d.oracle), d.oracle)} |\n`;
+  md += `| KursAggregatorFactory | ${cell(n.addr(d.factory), d.factory)} |\n`;
+  if (d.converter) md += `| KursConverter (ERC-7412 pull consumer, USD/IDR) | ${cell(n.addr(d.converter), d.converter)} |\n`;
+  if (d.kursRemit) md += `| KursRemit (ink! v6) | ${cell(n.addr(d.kursRemit), d.kursRemit)} |\n`;
+  md += `\nReporters (quorum ${d.quorum} of ${d.reporters.length}): ${d.reporters.map((r) => `${cell(n.addr(r), short(r))}`).join(", ")}\n\n`;
 
   md += `### Feeds and latest round\n\n| Feed | AggregatorV3 clone | Latest round | Answer | Updated (UTC) |\n|---|---|---|---|---|\n`;
   latestBy[d.chain] = {};
@@ -53,11 +56,14 @@ for (const d of deployments) {
       .catch(() => [0n, 0n, 0n, 0n]);
     latestBy[d.chain][pair] = { roundId, answer };
     const when = updatedAt ? new Date(Number(updatedAt) * 1000).toISOString().replace("T", " ").slice(0, 19) : "none yet";
-    md += `| ${pair} | [\`${short(agg)}\`](${n.addr(agg)}) | ${roundId} | ${(Number(answer) / 1e8).toString()} | ${when} |\n`;
+    md += `| ${pair} | ${cell(n.addr(agg), short(agg))} | ${roundId} | ${(Number(answer) / 1e8).toString()} | ${when} |\n`;
   }
 
   md += `\n### Transactions\n\n| What | Transaction |\n|---|---|\n`;
-  for (const [what, h] of Object.entries(d.txs)) md += `| ${what} | [\`${short(h)}\`](${n.tx(h)}) |\n`;
+  for (const [what, h] of Object.entries(d.txs)) {
+    const rc = await c.getTransactionReceipt({ hash: h }).catch(() => null);
+    md += `| ${what} | ${cell(n.tx(h, rc?.blockNumber), short(h))}${rc ? ` (block ${rc.blockNumber})` : ""} |\n`;
+  }
   md += "\n";
 }
 

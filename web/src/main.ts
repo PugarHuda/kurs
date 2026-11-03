@@ -19,14 +19,21 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
+// Portaldot's Substrate explorer does not resolve EVM hashes or H160 addresses yet;
+// rounds link to the block in the official Node Console instead (see txLink).
+const PORTALDOT_BLOCK = (n: bigint) =>
+  `https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/${n}`;
+
 const EXPLORER: Record<Deployment["chain"], { tx: (h: Hex) => string; addr: (a: Address) => string } | undefined> = {
-  portaldot: {
-    tx: (h) => `https://scanner-testnet-v3.portaldot.dev/tx/${h}`,
-    addr: (a) => `https://scanner-testnet-v3.portaldot.dev/addresses/${a}`,
-  },
+  portaldot: undefined,
   sepolia: { tx: (h) => `https://sepolia.etherscan.io/tx/${h}`, addr: (a) => `https://sepolia.etherscan.io/address/${a}` },
   local: undefined,
 };
+
+const txLink = (d: Deployment, hash: Hex, block: bigint) =>
+  d.chain === "portaldot"
+    ? `<a href="${PORTALDOT_BLOCK(block)}" target="_blank" rel="noopener">block ${block.toLocaleString("en-US")}</a> <code>${short(hash)}</code>`
+    : link(d, "tx", hash);
 
 const link = (d: Deployment, kind: "tx" | "addr", v: string, text = short(v)) => {
   const e = EXPLORER[d.chain];
@@ -166,7 +173,7 @@ function renderDetail(s: Snapshot) {
         ${
           ev
             ? `<dl class="facts">
-                <dt>Transaction</dt><dd>${link(d, "tx", ev.txHash)}</dd>
+                <dt>Transaction</dt><dd>${txLink(d, ev.txHash, ev.blockNumber)}</dd>
                 <dt>Sent by</dt><dd>${link(d, "addr", ev.transmitter)} <span class="muted">(anyone can send; the signatures carry the trust)</span></dd>
                 <dt>Observed</dt><dd>${new Date(ev.observedAt * 1000).toUTCString()}</dd>
                 <dt>Feed address</dt><dd>${d.aggregators[f.feed.pair] ? link(d, "addr", d.aggregators[f.feed.pair]) : "not deployed"} <span class="muted">(Chainlink AggregatorV3)</span></dd>
