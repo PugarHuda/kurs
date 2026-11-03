@@ -9,6 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.0 # pinned: .gas-snapshot depends on the gas schedule of this version
       - run: forge test -vv
         working-directory: contracts
       # gas regressions: deterministic tests only (fuzz/invariant gas varies by seed)
@@ -20,6 +22,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.0 # pinned: .gas-snapshot depends on the gas schedule of this version
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -33,6 +37,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: foundry-rs/foundry-toolchain@v1 # anvil for the e2e test
+        with:
+          version: v1.8.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
