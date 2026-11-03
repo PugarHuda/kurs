@@ -136,11 +136,11 @@ li { margin-bottom: 12px; }
   <h2 style="color:#fff">Built during the hacker house</h2>
   <div class="stats">
     <div><div class="big">11</div><p class="soft">feeds: BTC, ETH, DOT, USDT, USD/IDR, five equities, tPOT</p></div>
-    <div><div class="big">87</div><p class="soft">tests: 42 Solidity incl. fuzz and invariants, 17 TypeScript incl. anvil e2e, 28 Playwright incl. accessibility and layout shift; Slither in CI</p></div>
+    <div><div class="big">93</div><p class="soft">tests: 42 Solidity incl. invariants, 17 TypeScript, 34 Playwright; Slither in CI</p></div>
     <div><div class="big">2</div><p class="soft">VMs reading one oracle: EVM and PolkaVM (ink! v6)</p></div>
     <div><div class="big">5</div><p class="soft">reporters, quorum 3, median on chain</p></div>
     <div><div class="big">0</div><p class="soft">servers: the dashboard reads public RPCs in the browser</p></div>
-    <div><div class="big">2</div><p class="soft">ways in: pushed by the relay, or pulled into your own transaction with ERC-7412</p></div>
+    <div><div class="big">2</div><p class="soft">ways in: pushed by the relay, or pulled with ERC-7412</p></div>
   </div>
   <span class="n">07</span>
 </section>
@@ -156,7 +156,7 @@ li { margin-bottom: 12px; }
       <tr><td>ink! v6 reads the Solidity oracle</td><td>pallet-revive node: KursRemit.latest() equals the oracle round</td></tr>
       <tr><td>Portaldot-native price on Ethereum</td><td>tPOT/pUSD from AssetConversion, live on Sepolia</td></tr>
       <tr><td>Live on Portaldot V3</td><td>KursOracle <code>0x5bdd…56f4</code>, 11 feeds, rounds every ~64 min at ~0.1 tPOT, mirrored to Sepolia</td></tr>
-      <tr><td>Owned by a native Portaldot multisig</td><td>2-of-3 pallet-multisig; acceptOwnership executed via asMulti + revive.call</td></tr>
+      <tr><td>Owner behind a native multisig + timelock</td><td>pallet-proxy pure proxy, 2-of-3 pallet-multisig, 600-block delay; early execution rejected on chain</td></tr>
       <tr><td>ERC-7412 pull on Portaldot</td><td>fulfillOracleQuery then convert, $100 to Rp1,814,489.94</td></tr>
     </table>
     <p class="soft" style="margin-top:30px">Every address and transaction hash: <code>github.com/PugarHuda/kurs/blob/main/docs/evidence.md</code> · live: <code>kurs-ten-zeta.vercel.app</code></p>
@@ -185,7 +185,6 @@ li { margin-bottom: 12px; }
     <div class="col">
       <ul>
         <li>Independent reporter operators from the Portaldot community</li>
-        <li>Owner key behind Portaldot's native Multisig + Proxy with a delay</li>
         <li>Kurs reporters as operators of the runtime Oracle pallet</li>
       </ul>
     </div>

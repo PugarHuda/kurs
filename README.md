@@ -262,7 +262,7 @@ On Ethereum Sepolia the same role belongs to a **2-of-3 Safe** (`reporter/script
 
 ## Roadmap
 
-- Done during the hacker house: oracle, clones, ring buffer, push relay and ERC-7412 pull, bundle API, 11 feeds, ink! v6 consumer verified cross-VM, dashboard with in-browser signature verification, live on Portaldot V3 and Sepolia with an hourly relay and /api/health, ERC-7412 pull executed on both chains, owner handed to a native 2-of-3 pallet-multisig (Portaldot) and a 2-of-3 Safe (Sepolia), 87 automated tests incl. Foundry invariants over 128k random transmits, Slither in CI with every finding triaged in [docs/security.md](docs/security.md), Lighthouse 100/100/100/100 on mobile.
+- Done during the hacker house: oracle, clones, ring buffer, push relay and ERC-7412 pull, bundle API, 11 feeds, ink! v6 consumer verified cross-VM, dashboard with in-browser signature verification, live on Portaldot V3 and Sepolia with an hourly relay and /api/health, ERC-7412 pull executed on both chains, owner handed to a native 2-of-3 pallet-multisig (Portaldot) and a 2-of-3 Safe (Sepolia), 93 automated tests incl. Foundry invariants over 128k random transmits, Slither in CI with every finding triaged in [docs/security.md](docs/security.md), Lighthouse 100/100/100/100 on mobile.
 - Next: independent reporter operators from the Portaldot community; Kurs reporters as operators of the runtime `Oracle` pallet, so native pallets and contracts read the same prices; a read precompile proposal for the `Oracle` pallet; more chains in the relay (Base, BSC, Arbitrum), plus the bridge at bridge.portaldot.dev for POT-denominated feeds.
 
 ## Prior work and third-party code
