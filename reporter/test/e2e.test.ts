@@ -75,3 +75,31 @@ it("deploys, transmits a 5-reporter round and serves it through AggregatorV3", a
   expect(round.signerBitmap).toBe(0b11111); // all five reporters counted
   expect(round.roundId).toBe(eth.roundId);
 }, 60_000);
+
+it("ERC-7412 pull: stale price -> OracleDataRequired -> fulfil + convert (no Multicall3 on this chain)", async () => {
+  const { sendWithFreshPrice } = await import("../src/pull.js");
+  const { kursConverterAbi } = await import("../src/abi.js");
+  const { encodeFunctionData, parseEventLogs } = await import("viem");
+  const deployer = privateKeyToAccount(ANVIL_PK);
+  const d = loadDeployment("local")!;
+  expect(d.converter).toMatch(/^0x/);
+
+  // convert $100.00; USD/IDR has never been pushed on this oracle, so the converter must pull
+  const data = encodeFunctionData({ abi: kursConverterAbi, functionName: "convert", args: [10_000n] });
+  const { pub } = clients("local");
+  const before = await pub.call({ to: d.converter!, data }).then(() => "ok").catch((e) => String(e));
+  expect(before).toMatch(/OracleDataRequired|reverted/);
+
+  // localKeys = the oracle's reporters; prices come from the live sources
+  const res = await sendWithFreshPrice("local", deployer, d.converter!, data, reporters);
+  expect(res.pulled?.pair).toBe("USD/IDR");
+  expect(res.batched).toBe(false); // anvil has no Multicall3 -> two transactions
+  expect(res.hashes).toHaveLength(2);
+  const [ev] = parseEventLogs({ abi: kursConverterAbi, logs: res.receipt.logs, eventName: "Converted" });
+  expect(ev.args.amount).toBe(10_000n);
+  expect(ev.args.converted).toBe((10_000n * BigInt(ev.args.price)) / 100_000_000n);
+
+  // now fresh: a second conversion needs no pull
+  const again = await sendWithFreshPrice("local", deployer, d.converter!, data, reporters);
+  expect(again.pulled).toBeUndefined();
+}, 90_000);
