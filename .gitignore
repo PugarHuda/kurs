@@ -18,3 +18,5 @@ deployments/local.json
 contracts/out-pvm/
 web/test-results/
 web/playwright-report/
+docs/video/raw/
+docs/video/raw.webm
