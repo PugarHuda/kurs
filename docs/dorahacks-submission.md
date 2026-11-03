@@ -1,61 +1,48 @@
-# DoraHacks BUIDL fields (copy-paste)
+# DoraHacks submission (copy-paste)
 
-**Name:** Kurs
+## Build page
 
-**Logo:** `docs/brand/logo.png`
+| Field | Value |
+|---|---|
+| Name | Kurs |
+| Logo | `docs/brand/logo.png` |
+| Brief description | Price feeds for Portaldot V3, signed by independent reporters, readable from Solidity and ink!, portable to any EVM chain. Push or pull (ERC-7412). |
+| Tags | Crypto / Web3 |
+| GitHub | https://github.com/PugarHuda/kurs |
+| Video | https://kurs-ten-zeta.vercel.app/kurs-demo.mp4 (2:13) |
+| Website | https://kurs-ten-zeta.vercel.app |
 
-**One-line vision (≤ 120 chars):**
-Price feeds for Portaldot V3, signed by independent reporters, readable from Solidity and ink!, portable to any EVM chain.
+## Organizer questions (submission form)
 
-**Track:** Multi-Chain & Cross-Chain Infra
+**Project name**
+Kurs
 
-**Tags:** Oracle, DeFi, Infrastructure, Solidity, ink!, Cross-chain, Portaldot
+**Track**
+Multi-Chain & Cross-Chain Infra
 
-**GitHub:** https://github.com/PugarHuda/kurs
+**One-sentence project overview**
+Kurs is a price oracle for Portaldot V3: independent reporters sign prices, KursOracle stores the median for Solidity and ink! contracts, and the same signed rounds settle on any EVM chain, pushed by a relayer or pulled into a transaction with ERC-7412.
 
-**Demo (live):** https://kurs-ten-zeta.vercel.app
+**Current Project Progress**
+Done: KursOracle (signed median, strict-majority quorum, freshness, spread and bounds checks, 64-round ring buffer, ERC-7412 pull), Chainlink AggregatorV3 clones (45 bytes per feed), KursConverter pull consumer, KursRemit ink! v6 consumer verified cross-VM on pallet-revive (ink! reads the Solidity oracle via its ABI), reporter/transmitter CLI with 11 feeds (BTC, ETH, DOT, USDT, USD/IDR, 5 equities, tPOT/pUSD read natively from Portaldot's AssetConversion runtime API), ERC-7412 client, signed-bundle API, dashboard with in-browser signature verification, demo video, deck. Live on Ethereum Sepolia with all contracts Sourcify-verified, rounds pushed by 5 reporters, and an ERC-7412 pull in one transaction. 61 automated tests (29 Solidity, 16 TypeScript incl. anvil e2e, 16 Playwright incl. accessibility), CI green.
 
-**Demo video:** (to add)
+**Outstanding Items**
+1. Deploy KursOracle, factory, KursConverter and KursRemit on Portaldot V3 testnet: needs about 1,900 tPOT for Revive storage deposits (measured with eth_estimateGas: ~711 tPOT for the oracle, ~900 for the ink! code). Requested via Discord ticket #1433; currently 9.9 tPOT from the faucet.
+2. Relay rounds to Portaldot and Sepolia from the same signatures; regenerate docs/evidence.md with Portaldot tx hashes.
+3. Re-record the demo with Portaldot testnet transactions.
 
-**Pitch deck:** https://github.com/PugarHuda/kurs/blob/main/docs/kurs-deck.pdf
+**GitHub Repository**
+https://github.com/PugarHuda/kurs
 
----
+**Testnet deployment details**
+Ethereum Sepolia (live): KursOracle 0xd3f6bf8e595e815de11598f23170b37341a2cbc3, KursAggregatorFactory 0x126793812e6a9ac8ac4c6368f230b1f87c9fa500, KursConverter 0xa8268109f331dd0b219d424c91c5d3e06c490877. ERC-7412 pull tx 0x9e2aa23575734bba9b24b2ea6d25e9fc414a9b18cf2c3f64e323c3e9b17c405f. Every feed, clone and tx: https://github.com/PugarHuda/kurs/blob/main/docs/evidence.md
+Portaldot V3: native reads live (AssetConversionApi via state_call for tPOT/pUSD; Oracle pallet operator set read by the dashboard); contract deployment pending testnet tPOT (see Outstanding Items). Faucet claim to the deployer: 0x2d452d1d…5abdfa89.
 
-## Description (markdown)
+**Demo video link**
+https://kurs-ten-zeta.vercel.app/kurs-demo.mp4
 
-**Kurs** (Indonesian for "exchange rate") is a signed-observation price oracle built for Portaldot V3's dual VM.
+**Pitch deck link**
+https://github.com/PugarHuda/kurs/blob/main/docs/kurs-deck.pdf
 
-### The problem
-Portaldot V3 already has money apps: tokenised TSLA, NVDA, AAPL, AMZN and META trade against DUCAT in the runtime's own DEX, there is a pUSD test dollar, and hacker-house teams are shipping lending, escrow and stablecoin contracts. None of them can read a price. On the live V3 testnet (spec 3002) the `Oracle` pallet holds 0 values, its operator set is empty, no precompile exposes it to EVM, and no Chainlink, Pyth or RedStone is deployed. Routed through Portaldot's own pools, one TSLA token is worth about $0.04; the real price is about $410.
-
-### How Kurs works
-1. Reporters read exchanges, aggregators, Chainlink on Ethereum, FX and equity quotes, and Portaldot's own AssetConversion pools, then each signs its own observation with EIP-712.
-2. Anyone can transmit the bundle; the contract trusts signatures, not the sender.
-3. `KursOracle` (Solidity on pallet-revive) requires a strict-majority quorum, rejects stale, future, out-of-bounds and disagreeing reports, and stores the median. A dishonest minority cannot move it.
-4. Solidity reads it through the unchanged Chainlink `AggregatorV3Interface` (a 45-byte clone per feed). ink! v6 reads the same contract through a Solidity-ABI call (`KursRemit`, USD to Rupiah).
-5. The signature domain has no chain id, so a round signed once settles to the same answer on every chain. tPOT/pUSD, read from Portaldot's own DEX, is already live on Ethereum Sepolia.
-
-### Built for Revive
-Revive charges a deposit per byte of code and per storage item (we measured about 711 tPOT for the oracle). Kurs keeps a 64-round ring buffer per feed so new rounds add no deposit, and uses 45-byte clones for feed adapters.
-
-### Feeds (11)
-BTC, ETH, DOT, USDT, USD/IDR, TSLA, NVDA, AAPL, AMZN, META, and tPOT/pUSD from pallet-asset-conversion (median of 5 quotes across 20 minutes of blocks, thin pools refused).
-
-### Proof
-- Sepolia: KursOracle `0x5bdd9713ddc4f11e14bd3094882401cd122656f4`, verified on Sourcify (exact match), live rounds for all 11 feeds.
-- Portaldot V3: deployment details and every tx hash in `docs/evidence.md`.
-- 22 Solidity tests (incl. fuzz, cross-chain replay) + 15 TypeScript tests (incl. anvil end-to-end); CI green.
-- Dashboard reads everything from public RPCs in the browser, no backend.
-
-### Team
-Pugar Huda Mantoro, author of pdk (Portaldot Dev Kit): 1st place, Portaldot Online Mini Hackathon S1, Builder Tools; Community Favorite #1.
-
----
-
-## Check-in fields
-
-**Current progress:** Contracts, reporter/transmitter, 11 feeds, ink! v6 consumer, dashboard and deck done. Live on Ethereum Sepolia with Sourcify-verified contracts and rounds for all feeds. Reads Portaldot V3 natively (AssetConversion runtime API) for the tPOT/pUSD feed.
-
-**Outstanding items:** Deploy KursOracle + factory + KursRemit on Portaldot V3 testnet (needs ~1,900 tPOT for Revive storage deposits; requested via support ticket), run relay to both chains, record demo video.
-
-**Testnet deployment:** see `docs/evidence.md`.
+**Looking for teammates**
+No
