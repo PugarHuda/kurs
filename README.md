@@ -3,6 +3,7 @@
 [![ci](https://github.com/PugarHuda/kurs/actions/workflows/ci.yml/badge.svg)](https://github.com/PugarHuda/kurs/actions/workflows/ci.yml)
 [![feeds](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fkurs-ten-zeta.vercel.app%2Fapi%2Fhealth&query=%24.ok&label=feeds%20fresh&color=2ea44f)](https://kurs-ten-zeta.vercel.app/api/health)
 [![health](https://github.com/PugarHuda/kurs/actions/workflows/health.yml/badge.svg)](https://github.com/PugarHuda/kurs/actions/workflows/health.yml)
+[![npm](https://img.shields.io/npm/v/kurs-oracle)](https://www.npmjs.com/package/kurs-oracle)
 
 **Price feeds for Portaldot V3, signed by independent reporters, readable from Solidity and ink!, and portable to any EVM chain.**
 
@@ -238,7 +239,7 @@ What the tests cover: median of odd and even sets, a 2-of-5 lying minority canno
 | **Substrate runtime API** `ReviveApi_call` | Polkadot wallets, polkadot.js / PAPI clients, off-chain workers: no EVM RPC needed | Portaldot: [`/api/substrate`](https://kurs-ten-zeta.vercel.app/api/substrate), `reporter/src/substrate.ts` |
 | ink! v6 cross-contract call (Solidity ABI) | ink! contracts on pallet-revive | `ink/kurs_consumer` |
 | **MCP server** at [`/api/mcp`](https://kurs-ten-zeta.vercel.app/api/mcp) (Streamable HTTP, stateless): tools `list_feeds`, `get_price`, `convert`, `get_history`, `get_signed_bundle` | AI agents (Claude, Cursor, any MCP client): ask for a price and get the on-chain signed round, not a scraped number | Vercel; add it with `claude mcp add --transport http kurs https://kurs-ten-zeta.vercel.app/api/mcp`; [`/llms.txt`](https://kurs-ten-zeta.vercel.app/llms.txt) describes the API for LLMs |
-| **npm package [`kurs-oracle`](sdk/)** on viem: `getPrice`, `fetchBundle`, `writeWithFreshPrice` (ERC-7412 in one call), ABIs and live addresses | TypeScript dapps and bots | `sdk/`, tested in CI against the live contracts |
+| **npm package [`kurs-oracle`](https://www.npmjs.com/package/kurs-oracle)** (`npm i kurs-oracle viem`, source in [`sdk/`](sdk/)) on viem: `getPrice`, `fetchBundle`, `writeWithFreshPrice` (ERC-7412 in one call), ABIs and live addresses | TypeScript dapps and bots | `sdk/`, tested in CI against the live contracts |
 | HTTP: `/api/feeds`, `/api/bundle`, `/api/health`, `/api/substrate`, `/api/history` (full round history from `RoundUpdated` logs, past the 64-round buffer) | dashboards, ERC-7412 clients, monitors, indexers | Vercel; OpenAPI 3.1 spec at [`/openapi.json`](https://kurs-ten-zeta.vercel.app/openapi.json), linted by Redocly and contract-tested against the live responses |
 
 ## Governance: a native Portaldot multisig owns the oracle
