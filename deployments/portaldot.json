@@ -52,7 +52,9 @@
     "deployConverter": "0x3279416fa9ba3dada716ff79f21810f71dbd3eb2c682e291073031bb8cea08ed",
     "KursConverter.convert(10000) at a fresh price (USD 100 -> IDR 1,814,489.94)": "0x8e7d003a8c4c5a5828d44e454fd98bc71e24cabf952b406332cef7f0afa736b7",
     "transferOwnership(multisig H160)": "0xbcc817dbd124fe88e6ea6cca567a89fb8881ecc95810be1c0f3351bd162d0670",
-    "fund signer A (EVM value transfer to mapped H160)": "0x5469afe29977a76e89ca178eec9ea8d8ea677d0c1a5e9052e2d54f75e9b88cfb"
+    "fund signer A (EVM value transfer to mapped H160)": "0x5469afe29977a76e89ca178eec9ea8d8ea677d0c1a5e9052e2d54f75e9b88cfb",
+    "erc7412 pull 1/2: fulfillOracleQuery (no Multicall3 on Portaldot)": "0x1220a94327565743760bd238a0929e1014e91ed77dff605526de8a1fa84429f6",
+    "erc7412 pull 2/2: KursConverter.convert(10000)": "0x2a0fe924826fc78c8471bc9ed99afa295b86a761b20feb793cf9d435851bedcf"
   },
   "deployedAt": "2026-11-03T01:38:01.102Z",
   "converter": "0xbfc639efc469056d9d4dcd8d4215060bae1fd676",
