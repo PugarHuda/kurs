@@ -1,7 +1,6 @@
-KursOracle (Solidity via resolc) 0xc0d7aa0ed4193c0ba68448a00eb93049d690cdf0
-round on oracle [ 29893987n, 1815270000000n, 1793639264n, 1793639269n ] tx 0x75a6ffae779e87038e2b4e87f520827dc4f12b85553f71f1ffd4e9d914d89bd4
-KursRemit (ink! v6) 0xfbc1901fbd623893b206d01900e267f75f09ad44
-ink! latest() -> { roundId: 29893987n, answer: 1815270000000n }
-quote_and_log tx 0x2e8b52d5756a3e5ee063b7464653b0afe845ac26ebbac738a97d83d62b05f595 ContractEmitted: yes
-
-OK: ink! read round 29893987 = 18152.7 IDR per USD from the Solidity oracle
+KursOracle (Solidity via resolc) 0x2d87284035969656d538b3ccb6ef4654fe579d1c
+round on oracle [ 29894565n, 1815270000000n, 1793673952n, 1793673957n ] tx 0x37882fa5cb802e7ede3594688cd4477036eaae270d39ac27b71750b0e7ecce96
+KursRemit (ink! v6) 0x06db37b57bb04cf1130e80daa42825ccb986e7ae
+ink! latest() -> { roundId: 29894565n, answer: 1815270000000n }
+quote_and_log tx 0x2771f8236f779ecd669669201ca61602b4ff2a33bc7da821a77de952ece15607 ContractEmitted: yes
+OK: ink! read round 29894565 = 18152.7 IDR per USD from the Solidity oracle

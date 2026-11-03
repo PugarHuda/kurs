@@ -29,3 +29,10 @@ level = "warn"
 check-cfg = [
     'cfg(ink_abi, values("ink", "sol", "all"))'
 ]
+
+# pallet-revive charges a deposit per byte of code: optimise for size
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

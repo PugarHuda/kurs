@@ -49,7 +49,8 @@
     "aggregator META/USD": "0x4b93dddc5167d7876719ea96f5a8824b05fd9f19368cf780b5a310a909ee7df0",
     "setFeed tPOT/pUSD": "0x425066da2925d244a7e60b2b6c344346dcfc2685334171039d70fed52404ae0e",
     "aggregator tPOT/pUSD": "0xccb45697eb42e14569cc2ee92e381d934ca67476b7a624d11c323711a3e458f8",
-    "deployConverter": "0x3279416fa9ba3dada716ff79f21810f71dbd3eb2c682e291073031bb8cea08ed"
+    "deployConverter": "0x3279416fa9ba3dada716ff79f21810f71dbd3eb2c682e291073031bb8cea08ed",
+    "KursConverter.convert(10000) at a fresh price (USD 100 -> IDR 1,814,489.94)": "0x8e7d003a8c4c5a5828d44e454fd98bc71e24cabf952b406332cef7f0afa736b7"
   },
   "deployedAt": "2026-11-03T01:38:01.102Z",
   "converter": "0xbfc639efc469056d9d4dcd8d4215060bae1fd676"
