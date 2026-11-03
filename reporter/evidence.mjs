@@ -60,6 +60,18 @@ for (const d of deployments) {
     if (g.substrateTxs) {
       md += `Multisig account \`${g.account}\`, its Revive address \`${g.h160}\`.\n\n| Step | Extrinsic |\n|---|---|\n`;
       for (const [what, t] of Object.entries(g.substrateTxs)) md += `| ${what} | ${t.block ? `[\`${short(t.hash)}\`](${block(t.block)})` : `\`${short(t.hash)}\``} |\n`;
+      if (g.timelock?.pure) {
+        const t = g.timelock;
+        const live = owner && t.pureH160 && owner.toLowerCase() === t.pureH160.toLowerCase();
+        md += `\n#### Timelock: pallet-proxy delay of ${t.delayBlocks} blocks (~${Math.round((t.delayBlocks * 6) / 60)} min)\n\n`;
+        md += `Ownership moves to pure proxy \`${t.pure}\` (Revive \`${t.pureH160}\`), controlled by the multisig with a ${t.delayBlocks}-block delay: every owner action is announced (2 of 3), can execute only after the delay, and can be vetoed with \`proxy.rejectAnnouncement\` meanwhile. Status: ${live ? "**active, `owner()` is the pure proxy**" : `announced at block #${t.announcedAt}, executable from #${t.announcedAt + t.delayBlocks}`}.\n\n| Step | Extrinsic |\n|---|---|\n`;
+        for (const [what, s] of Object.entries(t.steps)) {
+          const one = s.execute ?? s;
+          md += `| ${what} | [\`${short(one.hash)}\`](${block(one.block)})${s.approve ? ` (approved [\`${short(s.approve.hash)}\`](${block(s.approve.block)}))` : ""} |\n`;
+        }
+        for (const [what, r] of Object.entries(t.rejectedEarly ?? {}))
+          md += `| rejected on chain, as intended: ${what} → \`${r.error}\` | ${r.block ? `[\`${short(r.hash)}\`](${block(r.block)})` : `\`${short(r.hash)}\``} |\n`;
+      }
     } else {
       md += `Safe ${cell(n.addr(g.account), g.account)} (also in the Safe app: https://app.safe.global/home?safe=sep:${g.account}). The handoff transactions are listed below.\n`;
     }

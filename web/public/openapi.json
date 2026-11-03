@@ -621,6 +621,10 @@
                 }
               }
             }
+          },
+          "partial": {
+            "type": "boolean",
+            "description": "true while older blocks are still being scanned (at most 20 chunks per request)"
           }
         }
       }

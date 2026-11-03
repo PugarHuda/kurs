@@ -372,7 +372,12 @@ async function renderGovernance(d: Deployment) {
   try {
     const owner = await ownerOf(d);
     const g = d.governance;
-    if (g && owner.toLowerCase() === g.h160.toLowerCase()) {
+    const tl = g?.timelock;
+    if (g && tl?.pureH160 && owner.toLowerCase() === tl.pureH160.toLowerCase()) {
+      const minutes = Math.round((tl.delayBlocks * 6) / 60);
+      el.innerHTML = `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is a pure proxy held by the <strong>native Portaldot ${g.threshold}-of-${g.signatories.length} multisig behind a ${tl.delayBlocks}-block (about ${minutes} min) timelock</strong>, built from pallet-proxy. Any change to feeds, reporters or ownership must be announced by ${g.threshold} Substrate signers and can only run ${tl.delayBlocks} blocks later; until then the multisig can veto it.</p>
+        <p class="muted">Pure proxy <code>${esc(short(tl.pure ?? ""))}</code> (Revive <code>${esc(short(tl.pureH160))}</code>), controlled by multisig <code>${esc(short(g.account))}</code>.</p>`;
+    } else if (g && owner.toLowerCase() === g.h160.toLowerCase()) {
       const native = g.type.startsWith("pallet-multisig");
       el.innerHTML = native
         ? `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is a <strong>native Portaldot ${g.threshold}-of-${g.signatories.length} multisig</strong> (pallet-multisig), not a single key. Changing feeds, reporters or ownership takes ${g.threshold} Substrate signatures, executed into the EVM contract through <code>revive.call</code>.</p>

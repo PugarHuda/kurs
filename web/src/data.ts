@@ -13,7 +13,15 @@ export interface Deployment {
   reporters: Address[];
   quorum: number;
   txs: Record<string, Hex>;
-  governance?: { type: string; threshold: number; signatories: string[]; account: string; h160: Address };
+  governance?: {
+    type: string;
+    threshold: number;
+    signatories: string[];
+    account: string;
+    h160: Address;
+    /** pallet-proxy timelock: a pure proxy owned by the multisig with a delay */
+    timelock?: { pure?: string; pureH160?: Address; delayBlocks: number };
+  };
 }
 
 const files = import.meta.glob<Deployment>("../../deployments/*.json", { eager: true, import: "default" });
