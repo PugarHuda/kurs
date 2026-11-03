@@ -7,9 +7,19 @@ import type { Hex } from "viem";
 import { FEEDS } from "./feeds.js";
 import { encodeFunctionData, parseEventLogs } from "viem";
 import { kursConverterAbi } from "./abi.js";
-import { configure, deploy, transmit } from "./chain.js";
+import { configure, deploy, relayExact, SLOT_ALIGNED, transmit, type TransmitResult } from "./chain.js";
 import { converterOf, sendWithFreshPrice } from "./pull.js";
-import { CHAINS, fromJson, observeAndSign, readAll, toJson, type ChainKey, type SignedObservation } from "./kurs.js";
+import {
+  CHAINS,
+  fromJson,
+  observeAndSign,
+  readAll,
+  sign,
+  toJson,
+  type ChainKey,
+  type FeedReading,
+  type SignedObservation,
+} from "./kurs.js";
 
 const envFile = fileURLToPath(new URL("../../.env", import.meta.url));
 if (existsSync(envFile)) process.loadEnvFile(envFile);
@@ -32,7 +42,7 @@ const chainsFromEnv = (): ChainKey[] =>
   });
 
 /** Signed observations from local keys plus any remote reporters (KURS_REPORTER_URLS). */
-async function collect(): Promise<SignedObservation[]> {
+async function collect(): Promise<{ obs: SignedObservation[]; readings: FeedReading[] }> {
   const readings = await readAll();
   const local = (await Promise.all(localReporters().map((a) => observeAndSign(a, readings)))).flat();
   const urls = (env("KURS_REPORTER_URLS") ?? "").split(",").filter(Boolean);
@@ -63,17 +73,31 @@ async function collect(): Promise<SignedObservation[]> {
       }),
     )
   ).flat();
-  return [...local, ...remote];
+  return { obs: [...local, ...remote], readings };
 }
 
+const print = (r: TransmitResult) => {
+  const what = r.hash ? `tx ${r.hash}` : r.error ? `ERROR ${r.error}` : `skip: ${r.skipped}`;
+  console.log(`${r.chain.padEnd(9)} ${r.pair.padEnd(10)} round ${r.roundId} ${r.answer ?? ""} ${what}`);
+};
+
 async function tick() {
-  const obs = await collect();
-  for (const chain of chainsFromEnv()) {
-    const res = await transmit(chain, deployer(), obs);
-    for (const r of res) {
-      const what = r.hash ? `tx ${r.hash}` : r.error ? `ERROR ${r.error}` : `skip: ${r.skipped}`;
-      console.log(`${chain.padEnd(9)} ${r.pair.padEnd(10)} round ${r.roundId} ${r.answer ?? ""} ${what}`);
-    }
+  const { obs, readings } = await collect();
+  const keys = localReporters();
+  // slot-aligned chains may need the same reading signed at another round id
+  const resign = async (pair: string, roundId: bigint) => {
+    const r = readings.find((x) => x.feed.pair === pair);
+    if (!r?.answer) return [];
+    const at = BigInt(Math.floor(Date.now() / 1000));
+    return Promise.all(keys.map((k) => sign(k, pair, roundId, r.answer!, at)));
+  };
+  const chains = chainsFromEnv().sort((a, b) => Number(!!SLOT_ALIGNED[b]) - Number(!!SLOT_ALIGNED[a]));
+  const mirrored: SignedObservation[][] = [];
+  for (const chain of chains) {
+    const res = await transmit(chain, deployer(), obs, FEEDS, { resign });
+    res.forEach(print);
+    if (SLOT_ALIGNED[chain]) mirrored.push(...res.flatMap((r) => (r.bundle ? [r.bundle] : [])));
+    else if (mirrored.length) (await relayExact(chain, deployer(), mirrored)).forEach(print);
   }
 }
 

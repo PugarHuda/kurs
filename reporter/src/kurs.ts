@@ -155,6 +155,8 @@ export interface BundleRules {
   maxObservationAge: number; // seconds, from the contract
   maxSpreadBps: number; // from the feed
   now?: number; // unix seconds
+  /** Accept exactly these rounds instead of the current/previous time bucket (slot-aligned relays). */
+  rounds?: readonly bigint[];
 }
 
 /**
@@ -172,7 +174,7 @@ export async function selectBundle(obs: SignedObservation[], rules: BundleRules)
   for (const o of obs) {
     if (!wellFormed(o)) continue;
     if (BigInt(o.s) > SECP256K1_HALF_N) continue;
-    if (o.roundId !== current && o.roundId !== current - 1n) continue;
+    if (rules.rounds ? !rules.rounds.includes(o.roundId) : o.roundId !== current && o.roundId !== current - 1n) continue;
     const at = Number(o.observedAt);
     if (at > now + MAX_FUTURE_SKEW || at + rules.maxObservationAge < now) continue;
     try {

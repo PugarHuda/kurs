@@ -103,3 +103,55 @@ it("ERC-7412 pull: stale price -> OracleDataRequired -> fulfil + convert (no Mul
   const again = await sendWithFreshPrice("local", deployer, d.converter!, data, reporters);
   expect(again.pulled).toBeUndefined();
 }, 90_000);
+
+it("slot-aligned relay re-signs at latest + 64k so the round overwrites the same ring-buffer slot", async () => {
+  const { transmit, SLOT_ALIGNED, configure } = await import("../src/chain.js");
+  const { roundOf, sign } = await import("../src/kurs.js");
+  const { encodeFunctionData } = await import("viem");
+  const deployer = privateKeyToAccount(ANVIL_PK);
+  const d = loadDeployment("local")!;
+  const { pub, wallet } = clients("local", deployer);
+  // a feed no other test has written, so its only round is the one set up below
+  const pair = "AAPL/USD";
+  const feed = FEEDS.find((f) => f.pair === pair)!;
+  await configure("local", deployer, [feed]);
+  const now = Math.floor(Date.now() / 1000);
+  const answer = 34_000_000_000n;
+
+  // a previous round 70 buckets ago (fresh observation time, so the contract accepts it)
+  const r0 = roundOf(now) - 70n;
+  const old = await Promise.all(reporters.slice(0, 3).map((r) => sign(r, pair, r0, answer, BigInt(now))));
+  const latestBefore = (await pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "latestRound", args: [feedId(pair)] }))[0];
+  if (latestBefore < r0) {
+    const hash = await wallet!.writeContract({
+      address: d.oracle,
+      abi: kursOracleAbi,
+      functionName: "transmit",
+      args: [feedId(pair), r0, old.map((o) => ({ answer: o.answer, observedAt: o.observedAt, v: o.v, r: o.r, s: o.s }))],
+    });
+    await pub.waitForTransactionReceipt({ hash });
+  }
+  const [latest] = await pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "latestRound", args: [feedId(pair)] });
+
+  // current-bucket observations, but the chain is slot-aligned: transmit must re-sign at latest + 64
+  const current = await Promise.all(reporters.map((r) => sign(r, pair, roundOf(now), answer + 10_000_000n, BigInt(now))));
+  let resigned: bigint | undefined;
+  const resign = async (p: string, roundId: bigint) => {
+    resigned = roundId;
+    return Promise.all(reporters.map((r) => sign(r, p, roundId, answer + 10_000_000n, BigInt(Math.floor(Date.now() / 1000)))));
+  };
+  SLOT_ALIGNED.local = true;
+  process.env.KURS_FORCE = "1";
+  try {
+    const [res] = await transmit("local", deployer, current, [feed], { resign });
+    expect(res.error).toBeUndefined();
+    expect(res.skipped).toBeUndefined();
+    expect(res.hash).toMatch(/^0x/);
+    expect(resigned).toBe(latest + 64n);
+    expect(res.roundId % 64n).toBe(latest % 64n); // same slot: no new storage deposit on Revive
+    expect(res.bundle?.every((o) => o.roundId === latest + 64n)).toBe(true);
+  } finally {
+    delete SLOT_ALIGNED.local;
+    delete process.env.KURS_FORCE;
+  }
+}, 90_000);

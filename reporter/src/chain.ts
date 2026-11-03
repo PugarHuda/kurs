@@ -202,6 +202,24 @@ export interface TransmitResult {
   hash?: Hex;
   skipped?: string;
   error?: string;
+  /** the exact signed bundle that was transmitted (for relaying it unchanged to other chains) */
+  bundle?: SignedObservation[];
+}
+
+/**
+ * Chains where every new ring-buffer slot costs a storage deposit (pallet-revive:
+ * ~7.9 tPOT to open a slot vs ~0.11 tPOT to overwrite one, measured with
+ * scripts/deposit-probe.ts). There the transmitter picks round ids that land on
+ * the feed's existing slot: latest + 64k. The contract only needs roundId to
+ * increase and observations to be fresh, so this is as safe as minute rounds;
+ * it caps such a chain at about one round per 64 minutes per feed.
+ */
+export const SLOT_ALIGNED: Partial<Record<ChainKey, boolean>> = { portaldot: true };
+const HISTORY = 64n;
+
+export interface TransmitOptions {
+  /** re-sign one feed at a given round with local reporter keys (needed for slot alignment) */
+  resign?: (pair: string, roundId: bigint) => Promise<SignedObservation[]>;
 }
 
 /**
@@ -213,6 +231,7 @@ export async function transmit(
   transmitter: LocalAccount,
   observations: SignedObservation[],
   feeds: FeedConfig[] = FEEDS,
+  opts: TransmitOptions = {},
 ): Promise<TransmitResult[]> {
   const d = loadDeployment(chain);
   if (!d) throw new Error(`no deployment for ${chain}`);
@@ -240,8 +259,8 @@ export async function transmit(
       results.push({ chain, pair: f.pair, roundId: 0n, error: `bundle: ${(e as Error).message}` });
       continue;
     }
-    const roundId = obs[0]?.roundId ?? 0n;
-    const base = { chain, pair: f.pair, roundId };
+    let roundId = obs[0]?.roundId ?? 0n;
+    let base = { chain, pair: f.pair, roundId };
     if (obs.length < quorum) {
       results.push({ ...base, skipped: `only ${obs.length}/${quorum} reporters` });
       continue;
@@ -256,6 +275,35 @@ export async function transmit(
       functionName: "latestRound",
       args: [id],
     });
+
+    if (SLOT_ALIGNED[chain] && latestId > 0n) {
+      const target = latestId + HISTORY * ((roundId - latestId) / HISTORY);
+      if (target <= latestId) {
+        const wait = Number(latestId + HISTORY - roundId);
+        results.push({ ...base, answer, skipped: `slot-aligned: next cheap round in ~${wait} min` });
+        continue;
+      }
+      if (target !== roundId) {
+        if (!opts.resign) {
+          results.push({ ...base, answer, skipped: "slot-aligned chain needs local keys to re-sign" });
+          continue;
+        }
+        obs = await selectBundle(await opts.resign(f.pair, target), {
+          allowed: reporters,
+          maxObservationAge,
+          maxSpreadBps: f.maxSpreadBps,
+          now,
+          rounds: [target],
+        });
+        if (obs.length < quorum) {
+          results.push({ ...base, answer, skipped: `only ${obs.length}/${quorum} re-signed` });
+          continue;
+        }
+        roundId = target;
+        base = { chain, pair: f.pair, roundId };
+      }
+    }
+
     if (roundId <= latestId) {
       results.push({ ...base, answer, skipped: "round already on chain" });
       continue;
@@ -280,9 +328,60 @@ export async function transmit(
       });
       const rc = await pub.waitForTransactionReceipt({ hash, timeout: 180_000 });
       if (rc.status !== "success") throw new Error(`reverted ${hash}`);
-      results.push({ ...base, answer, hash });
+      results.push({ ...base, answer, hash, bundle: obs });
     } catch (e) {
       results.push({ ...base, answer, error: (e as Error).message.split("\n")[0].slice(0, 200) });
+    }
+  }
+  return results;
+}
+
+/**
+ * Sends already-transmitted bundles unchanged to another chain: the same
+ * signatures, round id and answer, so both chains hold an identical round.
+ */
+export async function relayExact(
+  chain: ChainKey,
+  transmitter: LocalAccount,
+  bundles: SignedObservation[][],
+): Promise<TransmitResult[]> {
+  const d = loadDeployment(chain);
+  if (!d) throw new Error(`no deployment for ${chain}`);
+  const { pub, wallet } = clients(chain, transmitter);
+  if (!wallet) throw new Error("no wallet");
+  const [reporters, maxObservationAge] = await Promise.all([
+    pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "reporters" }),
+    pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "maxObservationAge" }),
+  ]);
+  const results: TransmitResult[] = [];
+  for (const b of bundles) {
+    if (b.length === 0) continue;
+    const { feedId: id, roundId, pair } = b[0];
+    const f = FEEDS.find((x) => x.pair === pair);
+    const base = { chain, pair, roundId };
+    const [latestId] = await pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "latestRound", args: [id] });
+    if (roundId <= latestId) {
+      results.push({ ...base, skipped: `mirror: ${chain} already at round ${latestId}` });
+      continue;
+    }
+    const obs = await selectBundle(b, {
+      allowed: reporters,
+      maxObservationAge,
+      maxSpreadBps: f?.maxSpreadBps ?? 100,
+      rounds: [roundId],
+    });
+    try {
+      const hash = await wallet.writeContract({
+        address: d.oracle,
+        abi: kursOracleAbi,
+        functionName: "transmit",
+        args: [id, roundId, obs.map((o) => ({ answer: o.answer, observedAt: o.observedAt, v: o.v, r: o.r, s: o.s }))],
+      });
+      const rc = await pub.waitForTransactionReceipt({ hash, timeout: 180_000 });
+      if (rc.status !== "success") throw new Error(`reverted ${hash}`);
+      results.push({ ...base, hash, bundle: obs });
+    } catch (e) {
+      results.push({ ...base, error: (e as Error).message.split("\n")[0].slice(0, 200) });
     }
   }
   return results;
