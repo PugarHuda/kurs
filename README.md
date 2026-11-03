@@ -169,7 +169,7 @@ KURS_REPORTER_URLS=https://reporter-a.example,https://reporter-b.example npx tsx
 KURS_BUNDLE_URL=https://kurs-ten-zeta.vercel.app npx tsx src/cli.ts pull-convert 10000 sepolia
 ```
 
-It simulates `KursConverter.convert`, catches `OracleDataRequired`, fetches the bundle, and sends `Multicall3.aggregate3([fulfillOracleQuery, convert])`. On a chain without Multicall3 (Portaldot V3 today) it sends the two calls in order. The bundle API is `GET /api/bundle?pair=USD/IDR` on the dashboard host; `GET /api/feeds` lists feeds and addresses.
+It simulates `KursConverter.convert`, catches `OracleDataRequired`, fetches the bundle, and sends `Multicall3.aggregate3([fulfillOracleQuery, convert])`. On a chain without Multicall3 (Portaldot V3 today) it sends the two calls in order: done on Portaldot, see the two `erc7412 pull` transactions in [`docs/evidence.md`](docs/evidence.md). The bundle API is `GET /api/bundle?pair=USD/IDR` on the dashboard host; `GET /api/feeds` lists feeds and addresses.
 
 ### Hosted parts
 
@@ -221,9 +221,18 @@ The cross-VM run deploys KursOracle, transmits a 5-reporter USD/IDR round, deplo
 
 What the tests cover: median of odd and even sets, a 2-of-5 lying minority cannot move the median, duplicate, outsider, tampered and high-s signatures, stale, future and replayed rounds, disagreement and bounds circuit breakers, strict-majority quorum, reporter rotation, two-step ownership, the AggregatorV3 adapter and clones, the ring buffer, **the same bundle verifying on a second chain id**, the viem digest matching the contract formula byte for byte, and off-chain bundle selection under vote spamming, malformed input and coordinated outliers.
 
+## Governance: a native Portaldot multisig owns the oracle
+
+On Portaldot V3, `KursOracle.owner()` is not a key: it is a **2-of-3 `pallet-multisig` account**. `reporter/scripts/multisig-owner.ts` did the handoff on chain: signer A funded the multisig account, the deployer called `transferOwnership(<multisig's Revive address>)`, then `multisig.asMulti` wrapped `utility.batchAll[revive.mapAccount, revive.call(acceptOwnership)]`, approved by A and executed by B. From now on, adding a feed, rotating reporters or moving ownership takes two Substrate signatures that reach the EVM contract through `revive.call`. The dashboard's "Who can change Kurs here" panel reads `owner()` live; the extrinsics are in [`docs/evidence.md`](docs/evidence.md).
+
+## Operations
+
+- **Relay**: `.github/workflows/relay.yml` runs hourly and keeps `kurs run` alive for 57 minutes (a round check every 2 minutes), pushing to Portaldot (slot-aligned) and mirroring the identical bundle to Sepolia. A plain `*/10` cron fired once in two hours on this repo, so the loop design is deliberate.
+- **Health**: `GET /api/health` returns the age of every feed on both networks and answers 503 when one is older than twice its heartbeat (Portaldot: the 64-minute cadence). Point any uptime monitor at it.
+
 ## Security model and limits
 
-- **Trust**: the reporter set and its strict-majority quorum. A minority cannot move the median and cannot forge a round. The owner can rotate reporters and change feed parameters; on mainnet that key belongs behind Portaldot's native `Multisig` and `Proxy` with a delay.
+- **Trust**: the reporter set and its strict-majority quorum. A minority cannot move the median and cannot forge a round. On Portaldot the owner (who can rotate reporters and change feed parameters) is the native 2-of-3 multisig above; on Sepolia it is still the deployer key.
 - **Transmitter**: untrusted. It can only choose *when* to submit, and it re-checks everything off chain so one bad reporter cannot make a bundle revert.
 - **Today's reporters** are five keys run by the Kurs team. The protocol is built for independent operators (`kurs serve` plus `KURS_REPORTER_URLS`), and reporter rotation is one owner transaction.
 - **Equities** come from one public source (Yahoo). A paid market-data feed is needed before mainnet.
