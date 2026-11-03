@@ -133,11 +133,11 @@ li { margin-bottom: 12px; }
   <h2 style="color:#fff">Built during the hacker house</h2>
   <div class="stats">
     <div><div class="big">11</div><p class="soft">feeds: BTC, ETH, DOT, USDT, USD/IDR, five equities, tPOT</p></div>
-    <div><div class="big">37</div><p class="soft">tests: 22 Solidity incl. fuzz, 15 TypeScript incl. anvil end-to-end</p></div>
+    <div><div class="big">61</div><p class="soft">tests: 29 Solidity incl. fuzz, 16 TypeScript incl. anvil e2e, 16 Playwright incl. accessibility</p></div>
     <div><div class="big">2</div><p class="soft">VMs reading one oracle: EVM and PolkaVM (ink! v6)</p></div>
     <div><div class="big">5</div><p class="soft">reporters, quorum 3, median on chain</p></div>
     <div><div class="big">0</div><p class="soft">servers: the dashboard reads public RPCs in the browser</p></div>
-    <div><div class="big">45</div><p class="soft">bytes per Chainlink-compatible feed address</p></div>
+    <div><div class="big">2</div><p class="soft">ways in: pushed by the relay, or pulled into your own transaction with ERC-7412</p></div>
   </div>
   <span class="n">07</span>
 </section>
@@ -147,12 +147,14 @@ li { margin-bottom: 12px; }
   <div id="evidence">
     <table>
       <tr><th>What</th><th>Where</th></tr>
-      <tr><td>KursOracle, factory, 11 feed clones</td><td>Portaldot V3 testnet, see <code>deployments/portaldot.json</code></td></tr>
-      <tr><td>Live rounds, every signer recorded</td><td>RoundUpdated events, dashboard and explorer</td></tr>
-      <tr><td>KursRemit (ink! v6) quoting USD → IDR</td><td>Quoted event from a cross-VM read</td></tr>
-      <tr><td>Same signed round on Sepolia</td><td>identical round id and answer on both chains</td></tr>
+      <tr><td>KursOracle v2, factory, 11 feed clones, KursConverter</td><td>Ethereum Sepolia, oracle <code>0xd3f6…cbc3</code>, all verified on Sourcify</td></tr>
+      <tr><td>Rounds pushed by 5 reporters, every signer on chain</td><td>RoundUpdated events, re-verified in the browser by the dashboard</td></tr>
+      <tr><td>ERC-7412 pull in one transaction</td><td>Multicall3: fulfillOracleQuery + convert, tx <code>0x9e2a…405f</code></td></tr>
+      <tr><td>ink! v6 reads the Solidity oracle</td><td>pallet-revive node: KursRemit.latest() equals the oracle round</td></tr>
+      <tr><td>Portaldot-native price on Ethereum</td><td>tPOT/pUSD from AssetConversion, live on Sepolia</td></tr>
+      <tr><td>Portaldot V3 deployment</td><td>waiting on testnet tPOT for Revive deposits (about 1,900 tPOT)</td></tr>
     </table>
-    <p class="soft" style="margin-top:30px">Every address and transaction hash: <code>github.com/PugarHuda/kurs/blob/main/docs/evidence.md</code></p>
+    <p class="soft" style="margin-top:30px">Every address and transaction hash: <code>github.com/PugarHuda/kurs/blob/main/docs/evidence.md</code> · live: <code>kurs-ten-zeta.vercel.app</code></p>
   </div>
   <span class="n">08</span>
 </section>
