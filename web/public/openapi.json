@@ -216,6 +216,54 @@
           }
         }
       }
+    },
+    "/api/x402": {
+      "get": {
+        "summary": "The /api/bundle signed bundle behind an x402 paywall (0.001 USDC on Base Sepolia per bundle); /api/bundle stays free",
+        "operationId": "x402Bundle",
+        "parameters": [
+          {
+            "name": "pair",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "USD/IDR"
+          },
+          {
+            "name": "X-PAYMENT",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "base64 JSON x402 v1 PaymentPayload (exact scheme, EIP-3009 authorization)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paid: the signed bundle; X-PAYMENT-RESPONSE carries the settlement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bundle"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment required: x402 v1 PaymentRequirements in accepts[]",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

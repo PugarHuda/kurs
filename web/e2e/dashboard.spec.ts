@@ -231,3 +231,14 @@ test("/api/metrics is valid Prometheus text with a sample per feed and chain", a
     expect(lines.some((l) => l.startsWith(`kurs_feed_age_seconds{chain="${chain}",pair="USD/IDR"}`))).toBe(true);
   expect(lines).toContainEqual(expect.stringMatching(/^kurs_healthy [01]$/));
 });
+
+test("/api/x402 answers 402 with x402 v1 requirements, and rejects a forged payment", async ({ request }) => {
+  const r = await request.get("/api/x402?pair=USD/IDR");
+  expect(r.status()).toBe(402);
+  const body = await r.json();
+  expect(body.x402Version).toBe(1);
+  expect(body.accepts[0]).toMatchObject({ scheme: "exact", network: "base-sepolia", maxAmountRequired: "1000" });
+  const forged = Buffer.from(JSON.stringify({ x402Version: 1, scheme: "exact", network: "base-sepolia", payload: { signature: "0x" + "11".repeat(65), authorization: { from: body.accepts[0].payTo, to: body.accepts[0].payTo, value: "1000", validAfter: "0", validBefore: "9999999999", nonce: "0x" + "00".repeat(32) } } })).toString("base64");
+  const r2 = await request.get("/api/x402?pair=USD/IDR", { headers: { "X-PAYMENT": forged }, timeout: 60_000 });
+  expect(r2.status()).toBe(402); // the facilitator refuses it: no bundle without a real payment
+});
