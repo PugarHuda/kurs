@@ -7,7 +7,7 @@ jobs:
   contracts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.8.0 # pinned: .gas-snapshot depends on the gas schedule of this version
@@ -20,11 +20,11 @@ jobs:
   slither:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: v1.8.0 # pinned: .gas-snapshot depends on the gas schedule of this version
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install slither-analyzer==0.11.6
@@ -35,11 +35,11 @@ jobs:
   reporter:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: foundry-rs/foundry-toolchain@v1 # anvil for the e2e test
         with:
           version: v1.8.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: npm ci && npx tsc --noEmit && npm test
@@ -48,8 +48,8 @@ jobs:
   web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: npm ci --prefix ../reporter && npm ci && npm run build
@@ -58,8 +58,8 @@ jobs:
   web-e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: npm ci --prefix ../reporter && npm ci && npx playwright install --with-deps chromium
@@ -70,8 +70,8 @@ jobs:
   sdk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       # builds the npm package and checks it against the live contracts and API
