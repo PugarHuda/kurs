@@ -198,6 +198,24 @@
           }
         }
       }
+    },
+    "/api/metrics": {
+      "get": {
+        "summary": "Prometheus metrics: feed age, answer, round id, freshness per chain, relayer gas balance",
+        "operationId": "metrics",
+        "responses": {
+          "200": {
+            "description": "Prometheus text exposition format 0.0.4",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

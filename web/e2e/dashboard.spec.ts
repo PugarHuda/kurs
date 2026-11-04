@@ -219,3 +219,15 @@ test("every API response matches openapi.json", async ({ request }) => {
   }
   expect(errs).toEqual([]);
 });
+
+test("/api/metrics is valid Prometheus text with a sample per feed and chain", async ({ request }) => {
+  const r = await request.get("/api/metrics", { timeout: 90_000 });
+  expect(r.status()).toBe(200);
+  expect(r.headers()["content-type"]).toContain("text/plain");
+  const lines = (await r.text()).trim().split("\n");
+  // every line is a comment or `name{labels} number`
+  for (const l of lines) expect(l).toMatch(/^(# (HELP|TYPE) kurs_\w+ .+|kurs_\w+(\{[^}]*\})? -?[0-9.e+-]+)$/);
+  for (const chain of ["portaldot", "sepolia"])
+    expect(lines.some((l) => l.startsWith(`kurs_feed_age_seconds{chain="${chain}",pair="USD/IDR"}`))).toBe(true);
+  expect(lines).toContainEqual(expect.stringMatching(/^kurs_healthy [01]$/));
+});
