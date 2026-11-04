@@ -259,7 +259,7 @@ On Ethereum Sepolia the same role belongs to a **2-of-3 Safe** (`reporter/script
 
 ## Operations
 
-- **Relay**: `.github/workflows/relay.yml` runs hourly and keeps `kurs run` alive for 57 minutes (a round check every 2 minutes), pushing to Portaldot (slot-aligned) and mirroring the identical bundle to Sepolia. A plain `*/10` cron fired once in two hours on this repo, so the loop design is deliberate.
+- **Relay**: `.github/workflows/relay.yml` runs hourly and keeps `kurs run` alive for 57 minutes (a round check every 2 minutes), pushing to Portaldot (slot-aligned) and mirroring the identical bundle to Sepolia. A plain `*/10` cron fired once in two hours on this repo, so the loop design is deliberate. A feed is pushed when it moves past its deviation threshold or reaches its heartbeat: crypto and USD/IDR hourly, the five equities every 4 h unless they move 0.25% (US markets are closed most of the week, and every Portaldot round costs tPOT).
 - **Health**: `GET /api/health` returns the age of every feed on both networks and answers 503 when one is older than twice its heartbeat (Portaldot: the 64-minute cadence). `.github/workflows/health.yml` checks it hourly: on failure it restarts the relay and opens a `health` issue, and the next healthy check closes it.
 - **Relay chaining**: each relay run dispatches the next one when it ends, so the feeds no longer depend on GitHub cron, which stopped firing for hours on this repo.
 

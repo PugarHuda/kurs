@@ -133,8 +133,11 @@ export const FEEDS: FeedConfig[] = [
       pair: `${s}/USD`,
       description: `${s} / USD (equity)`,
       decimals: 8,
-      heartbeat: 3600,
-      deviationBps: 50,
+      // ponytail: US markets are closed ~70% of the week, so an unchanged quote is pushed at
+      // most every 4 h (each Portaldot round costs tPOT); a 0.25% move still goes out on the
+      // next hourly tick. Market-hours-aware scheduling if this ever needs to be tighter.
+      heartbeat: 4 * 3600,
+      deviationBps: 25,
       maxSpreadBps: 100,
       minAnswer: d8(1),
       maxAnswer: d8(100_000),
