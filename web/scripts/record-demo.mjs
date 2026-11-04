@@ -126,6 +126,28 @@ await scene(
 // 8: built for Revive, tests, multi-chain
 await scene("s8", () => slide(7));
 
+// 8a: the same round through other protocols' interfaces (real reads), then x402 for agents
+await scene(
+  "s8a",
+  async () => {
+    // condensed docs/compat-sepolia.txt: protocol name + what its call returned
+    const lines = readFileSync(resolve(ROOT, "docs/compat-sepolia.txt"), "utf8").split("\n");
+    const out = lines
+      .filter((l) => l && !l.startsWith("#") && !l.startsWith("oracle") && !l.includes("lastUpdated"))
+      .map((l) => (l.startsWith("  ") ? l.replace(/ = .*?\s+->\s*/, "  ->  ") : l.replace(/\s+0x[0-9a-fA-F]{40}.*$/, "")))
+      .join("\n");
+    await terminal("One signed round, the interfaces apps already call (Sepolia)", "npx tsx scripts/deploy-compat.ts sepolia", out);
+  },
+  async () => {
+    await sleep(15000);
+    const r = await fetch(`${SITE}/api/x402?pair=USD/IDR`).catch(() => null);
+    if (!r) return;
+    const { error, accepts } = await r.json();
+    const { resource, outputSchema, ...req } = accepts[0];
+    await terminal(`x402 for agents: HTTP ${r.status} Payment Required`, `curl ${SITE}/api/x402?pair=USD/IDR`, JSON.stringify({ error, accepts: [req] }, null, 2));
+  },
+);
+
 // 9: close
 await scene("s9", async () => {
   await page.goto("https://github.com/PugarHuda/kurs", { waitUntil: "domcontentloaded" }).catch(() => {});
