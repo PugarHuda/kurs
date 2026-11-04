@@ -192,7 +192,7 @@ The five equities were relayed every 4 h while their on-chain `heartbeat` still 
 | Sepolia | Safe 2-of-3 `execTransaction` (MultiSend of 5 `setFeed`), batch file [`docs/safe/sync-feeds-sepolia.json`](safe/sync-feeds-sepolia.json) | [`0x07ac186f…0c6c6b`](https://sepolia.etherscan.io/tx/0x07ac186ffcd298c966005489b77d6ea2b0a19decc00f44647702b82d990c6c6b) |
 | Portaldot | multisig approve (signer A) of `proxy.announce(pure, hash(batchAll[revive.call(setFeed) x5]))` | `0x37d69a25e8e58b06e28e2fa97503579ac342e3db87099fb3190008800f15a04f` |
 | Portaldot | multisig execute (signer B): announcement at block #321487 | `0x525a0e4849b66b3bc5a92fda083adbfed0a8305c7b95544bc41943ec7c53aba8` |
-| Portaldot | `proxy.proxyAnnounced` after the 600-block delay (executable from #322087) | PORTALDOT_EXEC_PENDING |
+| Portaldot | `proxy.proxyAnnounced` after the 600-block delay (executable from #322087) | `0xbcd88a7a82b3566ed9562f16775b9124e8c6dd22f45fd26577503171511c6061` (block #322094; the five heartbeats now read 14400 on chain) |
 
 ### Pyth and Morpho views (read live)
 
