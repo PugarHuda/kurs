@@ -166,6 +166,10 @@ Deployed and read by `reporter/scripts/deploy-lending.ts`; full output with bloc
 
 KursQuoteOracle v1 (`0x787e4f515d1affa6a3dff10ee953f236db90cf30`, ERC-7726 only) stays live: KursMorphoOracle was built on it.
 
+### ERC-7412 pull from the dashboard's wallet button
+
+The dashboard verified a fresh USD/IDR bundle in the browser, then a wallet (EIP-1193) sent `Multicall3.aggregate3([fulfillOracleQuery(bundle), KursConverter.convert(10000)])`: $100.00 = Rp 1,814,000.00 at round 29896728, read back from the `Converted` event. Driven by `web/e2e/wallet.spec.ts`. Tx [`0x3f73468b…d0b68a`](https://sepolia.etherscan.io/tx/0x3f73468b86a7d9a604744d13e31250d6fa87a459b5f06c28ed98be0574d0b68a).
+
 ### Governance in use: feed config sync
 
 The five equities were relayed every 4 h while their on-chain `heartbeat` still said 3600 s on both oracles (found by `scripts/sync-feeds.ts --check`, now also exported as `kurs_feed_config_drift` in `/api/metrics`). Each owner fixed it:

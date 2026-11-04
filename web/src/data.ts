@@ -13,6 +13,8 @@ export interface Deployment {
   reporters: Address[];
   quorum: number;
   txs: Record<string, Hex>;
+  /** KursConverter: ERC-7412 pull consumer for USD/IDR */
+  converter?: Address;
   /** KursTwap per pair (time-weighted average over the oracle's rounds) */
   twap?: Record<string, Address>;
   governance?: {

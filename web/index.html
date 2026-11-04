@@ -74,6 +74,20 @@
         <div id="pools"><p class="muted">Reading pools…</p></div>
       </section>
 
+      <section class="convert" aria-labelledby="convert-title">
+        <h2 id="convert-title">Change money at today's rate</h2>
+        <p>Any two assets with a Kurs path between them: one feed, its inverse, or two feeds through USD. The rounds come from the board above, on the network you picked.</p>
+        <form id="convert-form" class="pull-form">
+          <label for="convert-amount">Amount</label>
+          <input id="convert-amount" type="number" inputmode="decimal" min="0" step="any" value="100" required />
+          <label for="convert-from">From</label>
+          <select id="convert-from"></select>
+          <label for="convert-to">To</label>
+          <select id="convert-to"></select>
+        </form>
+        <div id="convert-out" aria-live="polite"></div>
+      </section>
+
       <section class="pull" aria-labelledby="pull-title">
         <h2 id="pull-title">Pull a fresh signed price</h2>
         <p>Kurs also works the ERC-7412 way: a contract that needs a fresher price reverts with <code>OracleDataRequired</code>, and your client fetches a signed bundle and submits it with the call. Get one here; this page checks every signature before showing it.</p>

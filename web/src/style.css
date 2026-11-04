@@ -635,11 +635,19 @@ table.sigs td:first-child {
   white-space: nowrap;
 }
 
-.pull {
+.pull,
+.convert {
   margin-top: 3.5rem;
 }
 
-.pull > p {
+.convert-result {
+  font-size: 1.25rem;
+  margin: 0 0 0.3rem;
+  overflow-wrap: anywhere;
+}
+
+.pull > p,
+.convert > p {
   max-width: 70ch;
   color: var(--ink-soft);
   margin: 0 0 1rem;
@@ -654,6 +662,7 @@ table.sigs td:first-child {
 }
 
 .pull-form select,
+.pull-form input,
 .pull-form button {
   font: inherit;
   padding: 0.45rem 0.8rem;
@@ -670,7 +679,12 @@ table.sigs td:first-child {
   cursor: pointer;
 }
 
+.pull-form input {
+  width: 9rem;
+}
+
 .pull-form button:focus-visible,
+.pull-form input:focus-visible,
 .pull-form select:focus-visible {
   outline: 3px solid var(--led);
   outline-offset: 2px;

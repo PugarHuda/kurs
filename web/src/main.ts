@@ -1,10 +1,11 @@
 import "./style.css";
 import type { Address, Hex } from "viem";
-import { keccak256, toBytes } from "viem";
+import { createWalletClient, custom, encodeFunctionData, keccak256, parseAbi, parseEventLogs, toBytes, type EIP1193Provider } from "viem";
+import { sepolia as sepoliaChain } from "viem/chains";
 import { FEEDS, findFeed } from "../../reporter/src/feeds";
 import { FEEDS as ALL_FEEDS } from "../../reporter/src/feeds";
 import { verifyBundlePayload, verifyRound, type CheckedObservation } from "./verify";
-import { kursTwapAbi } from "../../reporter/src/abi";
+import { kursConverterAbi, kursOracleAbi, kursTwapAbi } from "../../reporter/src/abi";
 import {
   clientFor,
   DEPLOYMENTS,
@@ -300,9 +301,67 @@ function renderPull() {
         Round ${v.roundId}, median ${fmt(v.median, feed.decimals)}. Pass this payload to <code>KursOracle.fulfillOracleQuery</code> on any chain running Kurs.</p>
         ${obsTable(v.observations, feed.decimals)}
         <label class="payload">ERC-7412 payload (${(body.payload.length - 2) / 2} bytes)
-          <textarea readonly rows="3">${esc(body.payload)}</textarea></label>`;
+          <textarea readonly rows="3">${esc(body.payload)}</textarea></label>
+        ${pair === "USD/IDR" ? walletPullHtml() : ""}`;
+      if (pair === "USD/IDR") bindWalletPull(body.payload as Hex);
     } catch (err) {
       out.innerHTML = `<p class="bad-text">${esc((err as Error).message)}</p>`;
+    }
+  });
+}
+
+// The same pull from the visitor's own wallet: one Sepolia transaction,
+// Multicall3.aggregate3([KursOracle.fulfillOracleQuery(bundle), KursConverter.convert($100.00)]).
+// KursConverter only accepts a USD/IDR price younger than 300 s, so this works because the
+// bundle lands in the same transaction. The result is read back from its Converted event.
+const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11" as Address;
+const multicallAbi = parseAbi([
+  "struct Call3 { address target; bool allowFailure; bytes callData; }",
+  "function aggregate3(Call3[] calls) payable returns ((bool success, bytes returnData)[])",
+]);
+const injected = () => (window as unknown as { ethereum?: EIP1193Provider }).ethereum;
+
+function walletPullHtml() {
+  const sep = deployments.find((d) => d.chain === "sepolia");
+  if (!sep?.converter) return "";
+  return injected()
+    ? `<p><button type="button" id="wallet-pull">Convert $100 with this bundle from your wallet (Sepolia)</button></p><div id="wallet-out" aria-live="polite"></div>`
+    : `<p class="muted" id="wallet-out">With a browser wallet (MetaMask, Rabby…) on Sepolia you can send this bundle and a $100 conversion in one transaction from here. Without one: <code>kurs pull-convert</code>.</p>`;
+}
+
+function bindWalletPull(payload: Hex) {
+  const btn = document.querySelector<HTMLButtonElement>("#wallet-pull");
+  const sep = deployments.find((d) => d.chain === "sepolia")!;
+  const provider = injected();
+  if (!btn || !provider || !sep.converter) return;
+  btn.addEventListener("click", async () => {
+    const out = document.querySelector<HTMLElement>("#wallet-out")!;
+    btn.disabled = true;
+    try {
+      out.innerHTML = `<p class="muted">Waiting for your wallet…</p>`;
+      const wallet = createWalletClient({ chain: sepoliaChain, transport: custom(provider) });
+      const [account] = await wallet.requestAddresses();
+      if ((await wallet.getChainId()) !== sepoliaChain.id) await wallet.switchChain({ id: sepoliaChain.id });
+      const hash = await wallet.writeContract({
+        account,
+        address: MULTICALL3,
+        abi: multicallAbi,
+        functionName: "aggregate3",
+        args: [[
+          { target: sep.oracle, allowFailure: false, callData: encodeFunctionData({ abi: kursOracleAbi, functionName: "fulfillOracleQuery", args: [payload] }) },
+          { target: sep.converter!, allowFailure: false, callData: encodeFunctionData({ abi: kursConverterAbi, functionName: "convert", args: [10_000n] }) },
+        ]],
+      });
+      out.innerHTML = `<p class="muted">Sent ${link(sep, "tx", hash)}; waiting for a block…</p>`;
+      const rc = await clientFor(sep).waitForTransactionReceipt({ hash, timeout: 180_000 });
+      const ev = parseEventLogs({ abi: kursConverterAbi, logs: rc.logs, eventName: "Converted" })[0];
+      if (rc.status !== "success" || !ev) throw new Error(`transaction ${hash} did not convert`);
+      out.innerHTML = `<p><strong>$100.00 = Rp ${(Number(ev.args.converted) / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong>
+        at round ${ev.args.roundId} (${fmt(ev.args.price, 8)}), in one transaction: ${link(sep, "tx", hash)}.
+        The bundle you just verified was written on chain and used by the converter in the same call.</p>`;
+    } catch (e) {
+      out.innerHTML = `<p class="bad-text">${esc((e as Error).message.split("\n")[0])}</p>`;
+      btn.disabled = false;
     }
   });
 }
@@ -417,6 +476,56 @@ async function renderGovernance(d: Deployment) {
   }
 }
 
+// ------------------------------------------------------------------ convert
+// Same paths as /api/quote and the MCP convert tool, computed here from the rounds this
+// page already read on chain: direct feed, inverse, or two feeds through USD.
+
+const ASSETS = [...new Set(ALL_FEEDS.flatMap((f) => f.pair.split("/")))];
+
+function convertPath(s: Snapshot, from: string, to: string): { rate: number; used: FeedState[] } | undefined {
+  const get = (p: string) => s.feeds.find((f) => f.feed.pair === p && f.roundId > 0n);
+  const px = (f: FeedState) => Number(f.answer) / 10 ** f.feed.decimals;
+  const hop = (a: string, b: string) => {
+    if (a === b) return { rate: 1, used: [] as FeedState[] };
+    const d = get(`${a}/${b}`);
+    if (d) return { rate: px(d), used: [d] };
+    const i = get(`${b}/${a}`);
+    if (i) return { rate: 1 / px(i), used: [i] };
+    return undefined;
+  };
+  const direct = hop(from, to);
+  if (direct) return direct;
+  const a = hop(from, "USD");
+  const b = hop("USD", to);
+  return a && b ? { rate: a.rate * b.rate, used: [...a.used, ...b.used] } : undefined;
+}
+
+function renderConvert() {
+  const form = document.querySelector<HTMLFormElement>("#convert-form");
+  const from = document.querySelector<HTMLSelectElement>("#convert-from");
+  const to = document.querySelector<HTMLSelectElement>("#convert-to");
+  const amount = document.querySelector<HTMLInputElement>("#convert-amount");
+  if (!form || !from || !to || !amount) return;
+  if (!from.options.length) {
+    const opts = (sel: string) => ASSETS.map((a) => `<option${a === sel ? " selected" : ""}>${esc(a)}</option>`).join("");
+    from.innerHTML = opts("USD");
+    to.innerHTML = opts("IDR");
+    form.addEventListener("input", renderConvert);
+    form.addEventListener("submit", (e) => e.preventDefault());
+  }
+  const out = document.querySelector<HTMLElement>("#convert-out")!;
+  if (!last) return;
+  const n = Number(amount.value);
+  if (!(n > 0) || !Number.isFinite(n)) return void (out.innerHTML = `<p class="muted">Enter an amount above zero.</p>`);
+  const p = convertPath(last, from.value, to.value);
+  if (!p) return void (out.innerHTML = `<p class="bad-text">No Kurs path from ${esc(from.value)} to ${esc(to.value)} on ${esc(NETWORKS[last.deployment.chain].label)}: Kurs does not invent a cross rate it has no feeds for.</p>`);
+  const result = n * p.rate;
+  const now = Date.now() / 1000;
+  const shown = (x: number) => x.toLocaleString("en-US", { maximumSignificantDigits: x >= 1 ? 12 : 6 });
+  out.innerHTML = `<p class="convert-result"><strong>${shown(n)} ${esc(from.value)} = ${shown(result)} ${esc(to.value)}</strong></p>
+    <p class="muted">${p.used.length ? `Using ${p.used.map((f) => `${esc(f.feed.pair)} round ${f.roundId} (${fmt(f.answer, f.feed.decimals)}, ${Math.max(0, Math.round((now - f.observedAt) / 60))} min old)`).join(" and ")}.` : "Same asset."}</p>`;
+}
+
 async function refresh() {
   if (!current) return;
   try {
@@ -424,6 +533,7 @@ async function refresh() {
     others.set(current.chain, last); // kept for parity after the user switches network
     renderBoard(last);
     renderDetail(last);
+    renderConvert();
     void renderGovernance(current);
     $("#status").textContent = "";
   } catch (e) {

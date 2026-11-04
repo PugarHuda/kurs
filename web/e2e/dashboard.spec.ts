@@ -314,3 +314,45 @@ test("Sepolia detail shows the KursTwap time-weighted average next to the latest
   await expect(page.locator("#twap")).toContainText(/Time-weighted average: [\d,.]+ over (1 h|10 min)/, { timeout: 60_000 });
   await expect(page.locator("#twap a")).toHaveAttribute("href", /0x2f4385f565568b8f835ed8419f02b99bd0754f15/i);
 });
+
+test("the converter computes from the board's on-chain rounds and refuses a path Kurs has no feeds for", async ({ page }) => {
+  await page.goto("/?net=sepolia&feed=USD%2FIDR");
+  const idr = Number(await rows(page).filter({ hasText: "USD / IDR" }).locator("td.led").innerText());
+  await page.fill("#convert-amount", "250");
+  await page.selectOption("#convert-from", "USD");
+  await page.selectOption("#convert-to", "IDR");
+  const out = page.locator("#convert-out");
+  await expect(out).toContainText(/250 USD = [\d,.]+ IDR/);
+  const shown = Number((await out.locator("strong").innerText()).split("=")[1].replace(/[^\d.]/g, ""));
+  expect(shown).toBeCloseTo(250 * idr, -1);
+  await expect(out).toContainText(/USD\/IDR round \d+/);
+  await page.selectOption("#convert-from", "BTC"); // two feeds through USD
+  await expect(out).toContainText(/BTC\/USD round \d+ .* and USD\/IDR round \d+/);
+  await page.selectOption("#convert-from", "tPOT"); // tPOT is quoted in pUSD only
+  await expect(out).toContainText("No Kurs path from tPOT to IDR");
+  await page.fill("#convert-amount", "-5");
+  await expect(out).toContainText("Enter an amount above zero");
+});
+
+// Accuracy: the on-chain medians against references Kurs does not take its BTC/ETH median
+// from directly (Chainlink's own Sepolia feeds, an independent oracle network) and an FX
+// source no reporter reads (FloatRates).
+test("on-chain prices agree with independent references", async ({ request }) => {
+  const { createPublicClient, http, parseAbi, keccak256, toBytes } = await import("viem");
+  const { sepolia } = await import("viem/chains");
+  const c = createPublicClient({ chain: sepolia, transport: http("https://ethereum-sepolia-rpc.publicnode.com") });
+  const kurs = async (pair: string) => {
+    const [, answer] = await c.readContract({ address: "0xd3f6bf8e595e815de11598f23170b37341a2cbc3", abi: parseAbi(["function latestRound(bytes32) view returns (uint80, int192, uint64, uint64)"]), functionName: "latestRound", args: [keccak256(toBytes(pair))] });
+    return Number(answer) / 1e8;
+  };
+  const agg = parseAbi(["function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)"]);
+  for (const [pair, feed] of [["BTC/USD", "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43"], ["ETH/USD", "0x694AA1769357215DE4FAC081bf1f309aDC325306"]] as const) {
+    const [, a, , updatedAt] = await c.readContract({ address: feed, abi: agg, functionName: "latestRoundData" });
+    if (Date.now() / 1000 - Number(updatedAt) > 6 * 3600) continue; // a stalled Chainlink testnet feed is no reference
+    const [k, ref] = [await kurs(pair), Number(a) / 1e8];
+    expect(Math.abs(k - ref) / ref, `${pair}: Kurs ${k} vs Chainlink ${ref}`).toBeLessThan(0.02);
+  }
+  const fx = await (await request.get("https://www.floatrates.com/daily/usd.json", { timeout: 30_000 })).json();
+  const [k, ref] = [await kurs("USD/IDR"), Number(fx.idr.rate)];
+  expect(Math.abs(k - ref) / ref, `USD/IDR: Kurs ${k} vs FloatRates ${ref}`).toBeLessThan(0.01);
+});
