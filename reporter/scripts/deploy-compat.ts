@@ -2,7 +2,7 @@
 // against the live oracle, printing what an integrator of that protocol would see.
 //   npx tsx scripts/deploy-compat.ts sepolia > ../docs/compat-sepolia.txt
 // Resumable: addresses and txs go to deployments/<chain>.json.
-import { formatEther, keccak256, toBytes, type Address, type Hex } from "viem";
+import { formatEther, formatUnits, keccak256, toBytes, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { readFileSync, writeFileSync } from "node:fs";
 import * as A from "../src/abi.js";
@@ -62,11 +62,11 @@ console.log(`  getReferenceDataBulk(["ETH","DOT"],["USD","IDR"]) = ${bulk.map((x
 
 for (const [p, a] of Object.entries(api3)) {
   const [v, ts] = await r(a, A.kursApi3Abi, "read");
-  console.log(`\nAPI3 ReaderProxy ${p} ${a}\n  read() = (${v}, ${ts})  -> ${Number(v) / 1e18} observed ${t(ts)}`);
+  console.log(`\nAPI3 ReaderProxy ${p} ${a}\n  read() = (${v}, ${ts})  -> ${formatUnits(v, 18)} observed ${t(ts)}`);
 }
 
 const [cv, ca] = await r(chronicle, A.kursChronicleAbi, "readWithAge");
-console.log(`\nChronicle BTC/USD ${chronicle}\n  readWithAge() = (${cv}, ${ca})  -> $${Number(cv) / 1e18} observed ${t(ca)}`);
+console.log(`\nChronicle BTC/USD ${chronicle}\n  readWithAge() = (${cv}, ${ca})  -> $${formatUnits(cv, 18)} observed ${t(ca)}`);
 
 const prices = await r(aave, A.kursAaveOracleAbi, "getAssetsPrices", [[BTC, IDR]]);
 console.log(`\nAave v3 IPriceOracleGetter ${aave}  (BASE_CURRENCY_UNIT 1e8, maxAge 7200 s)`);
