@@ -265,6 +265,92 @@
           }
         }
       }
+    },
+    "/api/quote": {
+      "get": {
+        "tags": [
+          "feeds"
+        ],
+        "operationId": "getQuote",
+        "summary": "Convert an amount with on-chain Kurs prices",
+        "description": "A direct feed, its inverse, or a pivot through USD, read from KursOracle on chain. Every round used is returned with its age. With maxAge, a conversion that would use an older price is refused (409) instead of answered.",
+        "parameters": [
+          {
+            "name": "amount",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "default": 1
+            },
+            "example": 100
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "USD",
+            "description": "Asset symbol, case-insensitive (USD, IDR, BTC, ETH, DOT, USDT, TSLA, NVDA, AAPL, AMZN, META, tPOT, pUSD)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "IDR"
+          },
+          {
+            "name": "network",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "portaldot",
+                "sepolia"
+              ],
+              "default": "portaldot"
+            }
+          },
+          {
+            "name": "maxAge",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Refuse if any price used is older than this many seconds"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "502": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -693,6 +779,72 @@
           "partial": {
             "type": "boolean",
             "description": "true while older blocks are still being scanned (at most 20 chunks per request)"
+          }
+        }
+      },
+      "Quote": {
+        "type": "object",
+        "required": [
+          "amount",
+          "from",
+          "to",
+          "result",
+          "rate",
+          "network",
+          "feedsUsed"
+        ],
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "result": {
+            "type": "number"
+          },
+          "rate": {
+            "type": "number"
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "portaldot",
+              "sepolia"
+            ]
+          },
+          "feedsUsed": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "pair",
+                "price",
+                "roundId",
+                "ageSeconds",
+                "stale"
+              ],
+              "properties": {
+                "pair": {
+                  "type": "string"
+                },
+                "price": {
+                  "type": "number"
+                },
+                "roundId": {
+                  "type": "string"
+                },
+                "ageSeconds": {
+                  "type": "integer"
+                },
+                "stale": {
+                  "type": "boolean"
+                }
+              }
+            }
           }
         }
       }

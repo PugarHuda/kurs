@@ -50,6 +50,8 @@ const quote = await deploy("quoteOracle", A.kursQuoteAbi, A.kursQuoteBytecode, [
 const silo = await deploy("siloOracle", A.kursSiloOracleAbi, A.kursSiloOracleBytecode, [quote, IDR]);
 const twap: Record<string, Address> = {};
 for (const p of ["BTC/USD", "USD/IDR"]) twap[p] = await deploy(`twap.${p}`, A.kursTwapAbi, A.kursTwapBytecode, [j.oracle, p]);
+// Chainlink Automation / Gelato compatible keeper over both TWAPs; the relay calls it too
+const keeper = await deploy("twapKeeper", A.kursTwapKeeperAbi, A.kursTwapKeeperBytecode, [Object.values(twap)]);
 for (const [p, a] of Object.entries(twap)) {
   const { result } = await pub.simulateContract({ account: wallet!.account, address: a, abi: A.kursTwapAbi, functionName: "poke" });
   if (!result) continue;
@@ -82,6 +84,13 @@ console.log(`\nSilo v2 ISiloOracle  KursSiloOracle ${silo}  (quoteToken IDR)`);
 console.log(`  quoteToken() = ${await r(silo, A.kursSiloOracleAbi, "quoteToken")}`);
 const sq = await r(silo, A.kursSiloOracleAbi, "quote", [10n ** 8n, BTC]);
 console.log(`  quote(1e8, BTC) = ${sq}  -> 1 BTC collateral = Rp ${Number(formatUnits(sq, 18)).toLocaleString("en-US")}`);
+
+const [need, performData] = await r(keeper, A.kursTwapKeeperAbi, "checkUpkeep", ["0x"]);
+const [canExec, execPayload] = await r(keeper, A.kursTwapKeeperAbi, "checker");
+console.log(`
+KursTwapKeeper ${keeper}  (Chainlink Automation + Gelato)`);
+console.log(`  checkUpkeep("0x") = (${need}, ${performData})  -> due mask ${BigInt(performData)}`);
+console.log(`  checker() = (${canExec}, ${execPayload.slice(0, 10)}…)  -> performUpkeep selector`);
 
 for (const [p, a] of Object.entries(twap)) {
   const [count, oldest, last] = await Promise.all([r(a, A.kursTwapAbi, "count"), r(a, A.kursTwapAbi, "oldest"), r(a, A.kursTwapAbi, "lastRoundId")]);

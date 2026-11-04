@@ -1,0 +1,289 @@
+{
+  "version": "1.0",
+  "chainId": "11155111",
+  "createdAt": 1793802275511,
+  "meta": {
+    "name": "Kurs: sync feed config with feeds.ts",
+    "description": "TSLA/USD: heartbeat 3600 -> 14400 | NVDA/USD: heartbeat 3600 -> 14400 | AAPL/USD: heartbeat 3600 -> 14400 | AMZN/USD: heartbeat 3600 -> 14400 | META/USD: heartbeat 3600 -> 14400",
+    "txBuilderVersion": "1.16.5",
+    "createdFromSafeAddress": "0x1036B446bBbbe0d0973cD7Bd57FD274Fd76dFf36",
+    "createdFromOwnerAddress": ""
+  },
+  "transactions": [
+    {
+      "to": "0xd3f6bf8e595e815de11598f23170b37341a2cbc3",
+      "value": "0",
+      "data": null,
+      "contractMethod": {
+        "name": "setFeed",
+        "payable": false,
+        "inputs": [
+          {
+            "name": "feedId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "decimals",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "heartbeat",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxSpreadBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          },
+          {
+            "name": "maxAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          }
+        ]
+      },
+      "contractInputsValues": {
+        "feedId": "0x13ec3ae6d9a65df1ae5953598775a86c251d530770729433b0e40d1f2141afd6",
+        "description": "TSLA / USD (equity)",
+        "decimals": "8",
+        "heartbeat": "14400",
+        "maxSpreadBps": "100",
+        "minAnswer": "100000000",
+        "maxAnswer": "10000000000000"
+      }
+    },
+    {
+      "to": "0xd3f6bf8e595e815de11598f23170b37341a2cbc3",
+      "value": "0",
+      "data": null,
+      "contractMethod": {
+        "name": "setFeed",
+        "payable": false,
+        "inputs": [
+          {
+            "name": "feedId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "decimals",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "heartbeat",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxSpreadBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          },
+          {
+            "name": "maxAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          }
+        ]
+      },
+      "contractInputsValues": {
+        "feedId": "0xd7f402a699378a97cf4b1f46fb772a465535d2fead1457bcb27b58312638e264",
+        "description": "NVDA / USD (equity)",
+        "decimals": "8",
+        "heartbeat": "14400",
+        "maxSpreadBps": "100",
+        "minAnswer": "100000000",
+        "maxAnswer": "10000000000000"
+      }
+    },
+    {
+      "to": "0xd3f6bf8e595e815de11598f23170b37341a2cbc3",
+      "value": "0",
+      "data": null,
+      "contractMethod": {
+        "name": "setFeed",
+        "payable": false,
+        "inputs": [
+          {
+            "name": "feedId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "decimals",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "heartbeat",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxSpreadBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          },
+          {
+            "name": "maxAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          }
+        ]
+      },
+      "contractInputsValues": {
+        "feedId": "0x057702f36a95d62dffc7f6a121ad53458ce83b25464c9846baa841808fee4f2f",
+        "description": "AAPL / USD (equity)",
+        "decimals": "8",
+        "heartbeat": "14400",
+        "maxSpreadBps": "100",
+        "minAnswer": "100000000",
+        "maxAnswer": "10000000000000"
+      }
+    },
+    {
+      "to": "0xd3f6bf8e595e815de11598f23170b37341a2cbc3",
+      "value": "0",
+      "data": null,
+      "contractMethod": {
+        "name": "setFeed",
+        "payable": false,
+        "inputs": [
+          {
+            "name": "feedId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "decimals",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "heartbeat",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxSpreadBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          },
+          {
+            "name": "maxAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          }
+        ]
+      },
+      "contractInputsValues": {
+        "feedId": "0x8eb6660573f5b4d20aaa061371033891224e5fadc80278e61228dc8937629bc0",
+        "description": "AMZN / USD (equity)",
+        "decimals": "8",
+        "heartbeat": "14400",
+        "maxSpreadBps": "100",
+        "minAnswer": "100000000",
+        "maxAnswer": "10000000000000"
+      }
+    },
+    {
+      "to": "0xd3f6bf8e595e815de11598f23170b37341a2cbc3",
+      "value": "0",
+      "data": null,
+      "contractMethod": {
+        "name": "setFeed",
+        "payable": false,
+        "inputs": [
+          {
+            "name": "feedId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "decimals",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "heartbeat",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxSpreadBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          },
+          {
+            "name": "maxAnswer",
+            "type": "int192",
+            "internalType": "int192"
+          }
+        ]
+      },
+      "contractInputsValues": {
+        "feedId": "0xb4b2a82b96eabbf746992ac923dd0564b13fd74a357308110e549a4f6bbecf9a",
+        "description": "META / USD (equity)",
+        "decimals": "8",
+        "heartbeat": "14400",
+        "maxSpreadBps": "100",
+        "minAnswer": "100000000",
+        "maxAnswer": "10000000000000"
+      }
+    }
+  ]
+}

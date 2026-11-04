@@ -19,6 +19,7 @@ import {
   kursOracleAbi,
   kursOracleBytecode,
   kursTwapAbi,
+  kursTwapKeeperAbi,
 } from "./abi.js";
 import { FEEDS, feedId, type FeedConfig } from "./feeds.js";
 import { CHAINS, selectBundle, type ChainKey, type SignedObservation } from "./kurs.js";
@@ -36,6 +37,8 @@ export interface Deployment {
   converter?: Address;
   /** KursTwap per pair, poked after each round */
   twap?: Record<string, Address>;
+  /** KursTwapKeeper (Chainlink Automation / Gelato) over `twap` */
+  twapKeeper?: Address;
   reporters: Address[];
   quorum: number;
   txs: Record<string, Hex>;
@@ -401,6 +404,18 @@ export async function pokeTwaps(chain: ChainKey, account: LocalAccount): Promise
   if (!d?.twap) return [];
   const { pub, wallet } = clients(chain, account);
   const out: string[] = [];
+  if (d.twapKeeper) {
+    // the same path Chainlink Automation takes: checkUpkeep, then performUpkeep(performData)
+    try {
+      const [need, performData] = await pub.readContract({ address: d.twapKeeper, abi: kursTwapKeeperAbi, functionName: "checkUpkeep", args: ["0x"] });
+      if (!need) return [];
+      const hash = await wallet!.writeContract({ address: d.twapKeeper, abi: kursTwapKeeperAbi, functionName: "performUpkeep", args: [performData], chain: wallet!.chain, account });
+      const rc = await pub.waitForTransactionReceipt({ hash, timeout: 180_000 });
+      return [`${chain.padEnd(9)} twap keeper performUpkeep(mask ${BigInt(performData)}) ${rc.status} tx ${hash}`];
+    } catch (e) {
+      return [`${chain.padEnd(9)} twap keeper ERROR ${(e as Error).message.split("\n")[0].slice(0, 160)}`];
+    }
+  }
   for (const [pair, address] of Object.entries(d.twap)) {
     try {
       const { result, request } = await pub.simulateContract({ account, address, abi: kursTwapAbi, functionName: "poke" });

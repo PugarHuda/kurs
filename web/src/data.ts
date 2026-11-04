@@ -13,6 +13,8 @@ export interface Deployment {
   reporters: Address[];
   quorum: number;
   txs: Record<string, Hex>;
+  /** KursTwap per pair (time-weighted average over the oracle's rounds) */
+  twap?: Record<string, Address>;
   governance?: {
     type: string;
     threshold: number;

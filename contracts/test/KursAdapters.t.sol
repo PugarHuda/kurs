@@ -13,6 +13,7 @@ import {KursChronicle} from "../src/KursChronicle.sol";
 import {KursAaveOracle} from "../src/KursAaveOracle.sol";
 import {KursSiloOracle, IQuote} from "../src/KursSiloOracle.sol";
 import {KursTwap} from "../src/KursTwap.sol";
+import {KursTwapKeeper} from "../src/KursTwapKeeper.sol";
 
 /// Pyth, Morpho, DIA, Band, API3, Chronicle and Aave views over real signed Kurs rounds.
 contract KursAdaptersTest is Test {
@@ -325,5 +326,50 @@ contract KursAdaptersTest is Test {
         // 48 kept: the oldest is round 12, written 48 * 100 s before the last + 100
         assertEq(t.oldest(), block.timestamp - 100 - 47 * 100);
         assertEq(t.consult(100), 70_059e8); // the last 100 s are all the newest price
+    }
+
+    function test_twapKeeperChainlinkAndGelato() public {
+        KursTwap[] memory ts = new KursTwap[](2);
+        ts[0] = new KursTwap(oracle, "BTC/USD");
+        ts[1] = new KursTwap(oracle, "USD/IDR");
+        KursTwapKeeper k = new KursTwapKeeper(ts);
+        (bool need,) = k.checkUpkeep("");
+        assertFalse(need); // no rounds yet
+        _push(F_BTC, 70_000e8);
+        bytes memory data;
+        (need, data) = k.checkUpkeep("");
+        assertTrue(need);
+        assertEq(abi.decode(data, (uint256)), 1); // only BTC/USD
+        (bool can, bytes memory payload) = k.checker();
+        assertTrue(can);
+        (bool ok,) = address(k).call(payload); // Gelato executes the payload as is
+        assertTrue(ok);
+        assertEq(ts[0].count(), 1);
+        (need,) = k.checkUpkeep("");
+        assertFalse(need);
+        k.performUpkeep(abi.encode(type(uint256).max)); // replayed / forged mask: harmless
+        assertEq(ts[0].count(), 1);
+        assertEq(ts[1].count(), 0);
+    }
+
+    /// The average always lies between the lowest and highest price recorded in the window.
+    function testFuzz_twapBounded(int64[6] memory raw, uint16[6] memory gaps, uint32 window) public {
+        KursTwap t = new KursTwap(oracle, "BTC/USD");
+        int192 lo = type(int192).max;
+        int192 hi = type(int192).min;
+        uint256 start = block.timestamp;
+        for (uint256 i; i < 6; ++i) {
+            int192 p = int192(int256(1_000e8 + (uint256(uint64(raw[i])) % 1_000_000e8)));
+            _push(F_BTC, p);
+            t.poke();
+            if (p < lo) lo = p;
+            if (p > hi) hi = p;
+            vm.warp(block.timestamp + 1 + gaps[i]);
+        }
+        uint256 span = block.timestamp - start;
+        window = uint32(bound(window, 1, span));
+        int192 avg = t.consult(window);
+        assertGe(avg, lo);
+        assertLe(avg, hi);
     }
 }

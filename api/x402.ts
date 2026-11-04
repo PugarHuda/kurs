@@ -6,6 +6,7 @@
 // With X-PAYMENT: the public x402.org facilitator verifies the EIP-3009 authorization,
 // the bundle is built, then the payment is settled and X-PAYMENT-RESPONSE returned.
 // ponytail: settles before returning; a failed settle returns 402 and no bundle.
+export { preflight as OPTIONS } from "../lib/http.js";
 import { GET as bundle } from "./bundle.js";
 import { FEEDS, findFeed } from "../reporter/src/feeds.js";
 

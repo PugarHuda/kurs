@@ -69,7 +69,9 @@
     "deploy twap.BTC/USD": "0xd54509efed305bb01737cc8af0f972d8333d4a1352ecb48a0b5da09126ae279b",
     "deploy twap.USD/IDR": "0x5c63e336db1287545653c8210fdcfabb7c7c817a747a70f50192039b7cbc5f4e",
     "poke twap BTC/USD": "0x04cd7a24ba4d49c98524558c8dd79b569c45178ee4f4d81c0d7d4d5824768b59",
-    "poke twap USD/IDR": "0xc4861a635ea4552eafe530ac631e731369548e6fa3c657889e3730f38246a4ca"
+    "poke twap USD/IDR": "0xc4861a635ea4552eafe530ac631e731369548e6fa3c657889e3730f38246a4ca",
+    "deploy twapKeeper": "0x4004a32f1c8bb5d1df1c590b6660dc5087d0d92701c27fa556ba1160c78e2c38",
+    "Safe execTransaction(MultiSend 5x setFeed: sync feeds.ts)": "0x07ac186ffcd298c966005489b77d6ea2b0a19decc00f44647702b82d990c6c6b"
   },
   "deployedAt": "2026-11-02T17:20:23.108Z",
   "converter": "0xa8268109f331dd0b219d424c91c5d3e06c490877",
@@ -116,5 +118,6 @@
   "twap": {
     "BTC/USD": "0x2f4385f565568b8f835ed8419f02b99bd0754f15",
     "USD/IDR": "0x4738a3f8931918fc0c56cad53f65e2f4a508fadb"
-  }
+  },
+  "twapKeeper": "0xa1f36550f41da000bfa1ac9cdffb32ed08b43abc"
 }

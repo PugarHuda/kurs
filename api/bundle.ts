@@ -2,6 +2,7 @@
 // Live signed bundle for one feed: every configured reporter reads the sources,
 // signs its observation, and the response carries the ERC-7412 payload a client
 // passes to KursOracle.fulfillOracleQuery. The same bundle verifies on every chain.
+export { preflight as OPTIONS } from "../lib/http.js";
 import { privateKeyToAccount } from "viem/accounts";
 import type { Hex } from "viem";
 import { FEEDS, feedId, findFeed } from "../reporter/src/feeds.js";

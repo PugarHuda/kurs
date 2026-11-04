@@ -1,6 +1,7 @@
 // GET /api/substrate: every Kurs feed on Portaldot read through the Substrate runtime
 // API ReviveApi_call (node WebSocket only, no EVM RPC). Same numbers a polkadot.js or
 // PAPI client, a wallet or an off-chain worker gets.
+export { preflight as OPTIONS } from "../lib/http.js";
 import { formatUnits, type Address } from "viem";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import { FEEDS } from "../reporter/src/feeds.js";

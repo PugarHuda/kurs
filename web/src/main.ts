@@ -4,6 +4,7 @@ import { keccak256, toBytes } from "viem";
 import { FEEDS, findFeed } from "../../reporter/src/feeds";
 import { FEEDS as ALL_FEEDS } from "../../reporter/src/feeds";
 import { verifyBundlePayload, verifyRound, type CheckedObservation } from "./verify";
+import { kursTwapAbi } from "../../reporter/src/abi";
 import {
   clientFor,
   DEPLOYMENTS,
@@ -180,6 +181,7 @@ function renderDetail(s: Snapshot) {
   $("#detail").innerHTML = `
     <h2>${esc(f.feed.description)}</h2>
     <p class="lede">${f.roundId > 0n ? `Round ${f.roundId} settled at <strong>${fmt(f.answer, f.feed.decimals)}</strong>.` : "No round on this network yet."}</p>
+    ${d.twap?.[f.feed.pair] ? `<p id="twap" class="twap" aria-live="polite">Reading the time-weighted average…</p>` : ""}
     ${spark(f)}
     <ol class="steps">
       <li>
@@ -210,6 +212,26 @@ function renderDetail(s: Snapshot) {
     </ol>`;
   renderParity(f);
   if (ev) void runVerify(s, f, ev);
+  if (d.twap?.[f.feed.pair]) void renderTwap(d, f);
+}
+
+/** 1 h and 10 min averages from KursTwap, next to the latest round; the longest window its history covers. */
+async function renderTwap(d: Deployment, f: FeedState) {
+  const address = d.twap![f.feed.pair];
+  const c = clientFor(d);
+  const el = () => (selected === f.feed.pair && current?.chain === d.chain ? document.querySelector<HTMLElement>("#twap") : null);
+  try {
+    const oldest = Number(await c.readContract({ address, abi: kursTwapAbi, functionName: "oldest" }));
+    const span = Math.floor(Date.now() / 1000) - oldest - 30; // margin for block time vs this clock
+    const windows = [3600, 600].filter((w) => w <= span);
+    if (!windows.length) return void (el() && (el()!.textContent = "The time-weighted average needs a few more minutes of history."));
+    const avgs = await Promise.all(windows.map((w) => c.readContract({ address, abi: kursTwapAbi, functionName: "consult", args: [w] })));
+    const parts = windows.map((w, i) => `<strong>${fmt(avgs[i], f.feed.decimals)}</strong> over ${w >= 3600 ? `${w / 3600} h` : `${w / 60} min`}`);
+    if (el())
+      el()!.innerHTML = `Time-weighted average: ${parts.join(", ")}, from ${link(d, "addr", address)} (KursTwap; one round moves it far less than it moves the latest price).`;
+  } catch (e) {
+    if (el()) el()!.textContent = `Could not read the time-weighted average: ${(e as Error).message.split("\n")[0]}`;
+  }
 }
 
 function obsTable(obs: CheckedObservation[], decimals: number, d?: Deployment) {

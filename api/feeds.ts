@@ -1,4 +1,5 @@
 // GET /api/feeds: every feed, its id, sources and on-chain addresses per network.
+export { preflight as OPTIONS } from "../lib/http.js";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };
 import { FEEDS, feedId } from "../reporter/src/feeds.js";

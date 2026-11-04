@@ -162,7 +162,20 @@ Deployed and read by `reporter/scripts/deploy-lending.ts`; full output with bloc
 | KursTwap BTC/USD | `0x2f4385f565568b8f835ed8419f02b99bd0754f15` | `consult(600)` = the latest round; `consult(3600)` reverts `WindowTooLong` until an hour of history exists |
 | KursTwap USD/IDR | `0x4738a3f8931918fc0c56cad53f65e2f4a508fadb` | as above; the relay pokes both after every round (`pokeTwaps` in `reporter/src/chain.ts`) |
 
+| KursTwapKeeper: Chainlink Automation + Gelato | `0xa1f36550f41da000bfa1ac9cdffb32ed08b43abc` | `checkUpkeep("0x")` = (false, mask 0) once both TWAPs hold the latest round; the relay sends `performUpkeep(mask)` when one is due |
+
 KursQuoteOracle v1 (`0x787e4f515d1affa6a3dff10ee953f236db90cf30`, ERC-7726 only) stays live: KursMorphoOracle was built on it.
+
+### Governance in use: feed config sync
+
+The five equities were relayed every 4 h while their on-chain `heartbeat` still said 3600 s on both oracles (found by `scripts/sync-feeds.ts --check`, now also exported as `kurs_feed_config_drift` in `/api/metrics`). Each owner fixed it:
+
+| Network | Step | Transaction |
+|---|---|---|
+| Sepolia | Safe 2-of-3 `execTransaction` (MultiSend of 5 `setFeed`), batch file [`docs/safe/sync-feeds-sepolia.json`](safe/sync-feeds-sepolia.json) | [`0x07ac186f…0c6c6b`](https://sepolia.etherscan.io/tx/0x07ac186ffcd298c966005489b77d6ea2b0a19decc00f44647702b82d990c6c6b) |
+| Portaldot | multisig approve (signer A) of `proxy.announce(pure, hash(batchAll[revive.call(setFeed) x5]))` | `0x37d69a25e8e58b06e28e2fa97503579ac342e3db87099fb3190008800f15a04f` |
+| Portaldot | multisig execute (signer B): announcement at block #321487 | `0x525a0e4849b66b3bc5a92fda083adbfed0a8305c7b95544bc41943ec7c53aba8` |
+| Portaldot | `proxy.proxyAnnounced` after the 600-block delay (executable from #322087) | PORTALDOT_EXEC_PENDING |
 
 ### Pyth and Morpho views (read live)
 
@@ -255,6 +268,7 @@ Sepolia contracts are verified on Sourcify with an exact match:
 - https://repo.sourcify.dev/contracts/full_match/11155111/0xd43c69cb8b474772eeb4b8132a54fc44044992c3/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x2f4385f565568b8f835ed8419f02b99bd0754f15/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x4738a3f8931918fc0c56cad53f65e2f4a508fadb/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0xa1f36550f41da000bfa1ac9cdffb32ed08b43abc/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73/
 
 To check any deployment yourself: `cd contracts && forge build`, then compare `out/KursOracle.sol/KursOracle.json` deployedBytecode with `eth_getCode` at the oracle address (immutables differ only in DOMAIN_SEPARATOR).

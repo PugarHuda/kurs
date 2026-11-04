@@ -5,6 +5,7 @@
 // incrementally: each warm instance keeps what it scanned per (net, pair) and only
 // reads new blocks, at most MAX_CHUNKS per request, so a request cannot fan out
 // into an unbounded number of RPC calls.
+export { preflight as OPTIONS } from "../lib/http.js";
 import { createPublicClient, http, keccak256, parseAbiItem, toBytes, type Address, type Hex } from "viem";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };

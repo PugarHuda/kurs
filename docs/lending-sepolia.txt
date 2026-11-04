@@ -1,21 +1,25 @@
-# Kurs lending-protocol views on sepolia, read at block 12062772 (2026-11-04T13:40:12.000Z)
+# Kurs lending-protocol views on sepolia, read at block 12062972 (2026-11-04T14:20:36.000Z)
 oracle 0xd3f6bf8e595e815de11598f23170b37341a2cbc3
 
 Euler IPriceOracle / ERC-7726  KursQuoteOracle 0xc1764dea11e988cecdb5b7c92811fbbfe3550316
   name() = "KursQuoteOracle"
-  getQuotes(1e8, BTC, IDR) = (1419504863705503200000000000, 1419504863705503200000000000)  -> 1 BTC = Rp 1,419,504,863.706 (bid == ask)
-  getQuote(1e24, IDR, ETH) = 23811612878858998  -> Rp 1,000,000 = 0.023811612878858998 ETH
+  getQuotes(1e8, BTC, IDR) = (1420303389104540500000000000, 1420303389104540500000000000)  -> 1 BTC = Rp 1,420,303,389.105 (bid == ask)
+  getQuote(1e24, IDR, ETH) = 23781827784500253  -> Rp 1,000,000 = 0.023781827784500253 ETH
 
 Silo v2 ISiloOracle  KursSiloOracle 0xd43c69cb8b474772eeb4b8132a54fc44044992c3  (quoteToken IDR)
   quoteToken() = 0x0000000000000000000000000000000000000168
-  quote(1e8, BTC) = 1419504863705503200000000000  -> 1 BTC collateral = Rp 1,419,504,863.706
+  quote(1e8, BTC) = 1420303389104540500000000000  -> 1 BTC collateral = Rp 1,420,303,389.105
+
+KursTwapKeeper 0xa1f36550f41da000bfa1ac9cdffb32ed08b43abc  (Chainlink Automation + Gelato)
+  checkUpkeep("0x") = (false, 0x0000000000000000000000000000000000000000000000000000000000000000)  -> due mask 0
+  checker() = (false, 0x4585e33b…)  -> performUpkeep selector
 
 TWAP BTC/USD  KursTwap 0x2f4385f565568b8f835ed8419f02b99bd0754f15
-  count() = 1, lastRoundId() = 29896612, oldest() = 2026-11-04T12:52:36.000Z
-  consult(600) = 7823679093600  -> 78236.790936
-  consult(3600) = revert WindowTooLong(3600, 1793796756)
+  count() = 2, lastRoundId() = 29896676, oldest() = 2026-11-04T12:52:36.000Z
+  consult(600) = 7829570000000  -> 78295.7
+  consult(3600) = 7825937274386  -> 78259.37274386
 
 TWAP USD/IDR  KursTwap 0x4738a3f8931918fc0c56cad53f65e2f4a508fadb
-  count() = 1, lastRoundId() = 29896624, oldest() = 2026-11-04T13:04:12.000Z
-  consult(600) = 1814370000000  -> 18143.7
-  consult(3600) = revert WindowTooLong(3600, 1793797452)
+  count() = 2, lastRoundId() = 29896688, oldest() = 2026-11-04T13:04:12.000Z
+  consult(600) = 1814024766500  -> 18140.247665
+  consult(3600) = 1814305556413  -> 18143.05556413

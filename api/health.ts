@@ -1,6 +1,7 @@
 // GET /api/health: age of the latest round of every feed on every network.
 // 200 when every feed with data is within 2x its heartbeat (Portaldot: the 64-minute
 // slot-aligned cadence), 503 otherwise, so any uptime monitor can watch the relay.
+export { preflight as OPTIONS } from "../lib/http.js";
 import { createPublicClient, http, keccak256, toBytes, parseAbi, type Address } from "viem";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };

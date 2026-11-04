@@ -240,6 +240,7 @@ test("every API response matches openapi.json", async ({ request }) => {
     ["/api/health", "Health", "any"],
     ["/api/substrate", "SubstrateRead", "200"],
     ["/api/history?net=sepolia&pair=USD/IDR&limit=3", "History", "200"],
+    ["/api/quote?amount=100&from=USD&to=IDR&network=sepolia", "Quote", "200"],
   ];
   const errs: string[] = [];
   for (const [url, schema, want] of calls) {
@@ -260,6 +261,10 @@ test("/api/metrics is valid Prometheus text with a sample per feed and chain", a
   for (const chain of ["portaldot", "sepolia"])
     expect(lines.some((l) => l.startsWith(`kurs_feed_age_seconds{chain="${chain}",pair="USD/IDR"}`))).toBe(true);
   expect(lines).toContainEqual(expect.stringMatching(/^kurs_healthy [01]$/));
+  // the 1 h TWAP and its deviation from the latest round, and governance drift per feed
+  expect(lines).toContainEqual(expect.stringMatching(/^kurs_twap_1h\{chain="sepolia",pair="USD\/IDR"\} 1\d{4}(\.\d+)?$/));
+  expect(lines).toContainEqual(expect.stringMatching(/^kurs_twap_deviation_bps\{chain="sepolia",pair="BTC\/USD"\} -?\d+$/));
+  for (const chain of ["portaldot", "sepolia"]) expect(lines).toContainEqual(expect.stringMatching(new RegExp(`^kurs_feed_config_drift\\{chain="${chain}",pair="USD/IDR"\\} 0$`)));
 });
 
 test("/api/x402 answers 402 with x402 v1 requirements, and rejects a forged payment", async ({ request }) => {
@@ -271,4 +276,38 @@ test("/api/x402 answers 402 with x402 v1 requirements, and rejects a forged paym
   const forged = Buffer.from(JSON.stringify({ x402Version: 1, scheme: "exact", network: "base-sepolia", payload: { signature: "0x" + "11".repeat(65), authorization: { from: body.accepts[0].payTo, to: body.accepts[0].payTo, value: "1000", validAfter: "0", validBefore: "9999999999", nonce: "0x" + "00".repeat(32) } } })).toString("base64");
   const r2 = await request.get("/api/x402?pair=USD/IDR", { headers: { "X-PAYMENT": forged }, timeout: 60_000 });
   expect(r2.status()).toBe(402); // the facilitator refuses it: no bundle without a real payment
+});
+
+test("/api/quote converts with on-chain prices, shows each round's age, and refuses what it cannot answer honestly", async ({ request }) => {
+  const q = async (qs: string) => {
+    const r = await request.get(`/api/quote?${qs}`, { timeout: 60_000 });
+    return { status: r.status(), body: await r.json() };
+  };
+  const usd = await q("amount=100&from=usd&to=idr&network=sepolia");
+  expect(usd.status).toBe(200);
+  expect(usd.body).toMatchObject({ from: "USD", to: "IDR", network: "sepolia" });
+  expect(usd.body.result).toBeCloseTo(100 * usd.body.feedsUsed[0].price, 3);
+  const btc = await q("amount=1&from=BTC&to=IDR&network=sepolia");
+  expect(btc.body.feedsUsed.map((f: { pair: string }) => f.pair)).toEqual(["BTC/USD", "USD/IDR"]);
+  expect((await q("amount=10&from=tPOT&to=pUSD")).body.feedsUsed[0].pair).toBe("tPOT/pUSD");
+  expect((await q("amount=1&from=USD&to=IDR&maxAge=1")).status).toBe(409);
+  expect((await q("amount=1e308&from=BTC&to=IDR")).status).toBe(400);
+  expect((await q("amount=-1&from=USD&to=IDR")).status).toBe(400);
+  expect((await q("amount=1&from=tPOT&to=IDR")).status).toBe(404); // no pUSD/USD feed: no made-up path
+  expect((await q("amount=1&from=USD&to=IDR&network=evil")).status).toBe(400);
+});
+
+test("browsers can preflight the API: OPTIONS answers CORS, including X-PAYMENT for x402", async ({ request }) => {
+  for (const path of ["/api/x402?pair=USD/IDR", "/api/bundle?pair=USD/IDR", "/api/quote", "/api/history", "/api/feeds"]) {
+    const r = await request.fetch(path, { method: "OPTIONS", headers: { origin: "https://dapp.example", "access-control-request-method": "GET", "access-control-request-headers": "x-payment" } });
+    expect(r.status(), path).toBe(204);
+    expect(r.headers()["access-control-allow-origin"]).toBe("*");
+    expect(r.headers()["access-control-allow-headers"]).toContain("x-payment");
+  }
+});
+
+test("Sepolia detail shows the KursTwap time-weighted average next to the latest round", async ({ page }) => {
+  await page.goto("/?net=sepolia&feed=BTC%2FUSD");
+  await expect(page.locator("#twap")).toContainText(/Time-weighted average: [\d,.]+ over (1 h|10 min)/, { timeout: 60_000 });
+  await expect(page.locator("#twap a")).toHaveAttribute("href", /0x2f4385f565568b8f835ed8419f02b99bd0754f15/i);
 });
