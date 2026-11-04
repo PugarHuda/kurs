@@ -369,3 +369,11 @@ test("the board groups feeds by kind: crypto, FX, metals, equities, Portaldot na
   expect(eur).toBeGreaterThan(0.5);
   expect(eur).toBeLessThan(2);
 });
+
+test("a feed the Portaldot owner has not configured is labelled, not shown as a missing price", async ({ page }) => {
+  await page.goto("/?net=portaldot");
+  await expect(rows(page)).toHaveCount(FEED_COUNT);
+  // GBP/USD lives on Sepolia; on Portaldot its storage deposit (~15.6 tPOT) has not been paid
+  await expect(rows(page).filter({ hasText: "GBP / USD" }).locator("td.led")).toHaveText("not on this network");
+  await expect(rows(page).filter({ hasText: "BTC / USD" }).locator("td.led")).toHaveText(/^[\d,]+\.\d+$/);
+});

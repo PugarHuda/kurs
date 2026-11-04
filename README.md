@@ -16,7 +16,7 @@ Portaldot Hacker House 2026 · Track: **Multi-Chain & Cross-Chain Infra**
 | Network | KursOracle | Status |
 |---|---|---|
 | Ethereum Sepolia | [`0xd3f6bf8e…a2cbc3`](https://sepolia.etherscan.io/address/0xd3f6bf8e595e815de11598f23170b37341a2cbc3) | live: 16 feeds (crypto, FX majors, gold, equities, tPOT) pushed by the relay, ERC-7412 pull used on chain, oracle + factory + converter verified on Sourcify (exact match) |
-| **Portaldot V3 testnet** | `0x5bdd9713ddc4f11e14bd3094882401cd122656f4` ([round in the Node Console](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/299579)) | **live: 11 feeds, rounds from 5 reporters every ~64 min, mirrored unchanged to Sepolia; EUR, GBP, JPY, CNY and gold announced through the owner's 600-block timelock** |
+| **Portaldot V3 testnet** | `0x5bdd9713ddc4f11e14bd3094882401cd122656f4` ([round in the Node Console](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/299579)) | **live: 11 feeds, rounds from 5 reporters every ~64 min, mirrored unchanged to Sepolia; EUR/USD and gold announced through the owner's 600-block timelock** (GBP, JPY, CNY stay on Sepolia: a new feed costs ~15.6 tPOT of Revive deposit on Portaldot) |
 
 ![Kurs architecture](docs/architecture.png)
 

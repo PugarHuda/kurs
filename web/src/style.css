@@ -732,3 +732,9 @@ table.sigs td:first-child {
   color: #9fb0c6; /* same as the board's column headers: passes AA on --board */
   padding: 0.9rem 0.75rem 0.3rem;
 }
+
+.board td.led.off {
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: #9fb0c6;
+}

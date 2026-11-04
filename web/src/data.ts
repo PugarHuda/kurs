@@ -80,6 +80,8 @@ export interface FeedState {
   observedAt: number;
   updatedAt: number;
   history: RoundEvent[]; // oldest first
+  /** false when this network's oracle has no config for the feed */
+  configured: boolean;
 }
 
 export interface Snapshot {
@@ -99,10 +101,14 @@ const pairById = new Map(FEEDS.map((f) => [feedId(f.pair), f.pair]));
 export async function snapshot(d: Deployment): Promise<Snapshot> {
   const c = clientFor(d);
   const block = await c.getBlockNumber();
-  const [reporters, quorum] = await Promise.all([
+  const [reporters, quorum, ids] = await Promise.all([
     c.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "reporters" }),
     c.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "quorum" }),
+    c.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "feedIds" }),
   ]);
+  // feeds this oracle's owner has configured (setFeed); a feed can be listed in feeds.ts before
+  // it reaches a chain, as when its storage deposit has not been paid there yet
+  const configured = new Set(ids.map((x) => x.toLowerCase()));
 
   const range = NETWORKS[d.chain].logRange;
   // logs and state are independent: read them in parallel (getLogs is the slow one)
@@ -136,6 +142,7 @@ export async function snapshot(d: Deployment): Promise<Snapshot> {
       observedAt: Number(observedAt),
       updatedAt: Number(updatedAt),
       history: events.filter((e) => e.pair === feed.pair),
+      configured: configured.has(feedId(feed.pair).toLowerCase()),
     };
   });
   return { deployment: d, block, reporters: [...reporters], quorum, feeds };

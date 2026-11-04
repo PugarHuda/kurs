@@ -89,10 +89,10 @@ function boardRow(s: Snapshot, f: FeedState) {
   return `
     <tr class="${f.feed.pair === selected ? "sel" : ""}${stale ? " stale" : ""}" data-pair="${esc(f.feed.pair)}" tabindex="0">
       <th scope="row"><span class="pair">${esc(f.feed.pair.replace("/", " / "))}</span><span class="desc">${esc(sourceLine(f))}</span></th>
-      <td class="led">${has ? fmt(f.answer, f.feed.decimals) : "--.--"}</td>
+      <td class="led${f.configured ? "" : " off"}">${has ? fmt(f.answer, f.feed.decimals) : f.configured ? "--.--" : "not on this network"}</td>
       <td class="move">${move}</td>
       <td class="signers" title="${countBits(latestBitmap)} of ${s.reporters.length} reporters signed the latest round">${bits(latestBitmap, s.reporters.length)}</td>
-      <td class="age">${has ? ago(f.updatedAt) : "waiting"}</td>
+      <td class="age">${has ? ago(f.updatedAt) : f.configured ? "waiting" : "Sepolia"}</td>
     </tr>`;
 }
 

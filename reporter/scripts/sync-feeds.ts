@@ -156,7 +156,9 @@ async function portaldot() {
   const ops: Record<string, any> = (j.governance.ops ??= {});
   const pending = Object.entries(ops).filter(([, o]) => o.pending);
   const covered = new Set(pending.flatMap(([, o]) => o.pairs as string[]));
-  const fresh = todo.filter((x) => !covered.has(x.f.pair));
+  // --only EUR/USD,XAU/USD: announce just these (each new feed costs the proxy ~15.6 tPOT of Revive deposit)
+  const only = process.argv.includes("--only") ? new Set(process.argv[process.argv.indexOf("--only") + 1].split(",")) : undefined;
+  const fresh = todo.filter((x) => !covered.has(x.f.pair) && (!only || only.has(x.f.pair)));
   if (CHECK || (!fresh.length && !pending.length)) return;
   const d = loadDeployment("portaldot")!;
   const UNIT = 10n ** 14n;
@@ -219,7 +221,7 @@ async function portaldot() {
   }
 
   const now = (await api.rpc.chain.getHeader()).number.toNumber();
-  let executed = 0;
+  const executedPairs: string[] = [];
   for (const [name, o] of Object.entries(ops).filter(([, o]) => o.pending)) {
     if (now < o.announcedAt + DELAY) {
       console.log(`${name} (${o.pairs.join(", ")}): executable from #${o.announcedAt + DELAY}, now #${now} (~${Math.ceil(((o.announcedAt + DELAY - now) * 14) / 60)} min at ~14 s blocks). Re-run then.`);
@@ -232,12 +234,15 @@ async function portaldot() {
     if (!ex?.event.data.result.isOk) throw new Error(`proxyAnnounced ${name}: ${ex?.event.data.result.toString()}`);
     Object.assign(o, { pending: false, executedAt: (await api.rpc.chain.getHeader(r.block)).number.toNumber(), execute: r.hash });
     save();
-    executed++;
+    executedPairs.push(...o.pairs);
     console.log(`${name}: executed after the delay, proxy.proxyAnnounced ${r.hash} (block #${o.executedAt})`);
   }
   await api.disconnect();
-  if (executed && !Object.values(ops).some((o) => o.pending) && (await drift("portaldot")).length) throw new Error("Portaldot still differs after execution");
-  if (executed) await clones("portaldot");
+  if (!executedPairs.length) return;
+  // only the pairs just executed must match now (others may be deliberately not on this chain)
+  const left = (await drift("portaldot")).filter((x) => executedPairs.includes(x.f.pair));
+  if (left.length) throw new Error(`Portaldot still differs after execution: ${left.map((x) => x.f.pair).join(", ")}`);
+  await clones("portaldot");
 }
 
 if (arg === "sepolia" || arg === "both" || arg === "--check") await sepolia();
