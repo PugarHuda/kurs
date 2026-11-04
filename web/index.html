@@ -103,7 +103,21 @@ pub trait KursOracle {
 }
 let (_, rate, _, updated) = KursOracleRef::from(oracle).latest_round(USD_IDR);</code></pre>
           </figure>
+          <figure>
+            <figcaption>DIA's interface, live on Portaldot V3: apps that read DIA change one address</figcaption>
+            <pre tabindex="0"><code>// KursDIA on Portaldot V3: 0x969b85f2c66b8504bb4f33e16333e7328187dfd9
+(uint128 rate, uint128 observedAt) = IDIAOracleV2(KURS_DIA).getValue("USD/IDR");
+(uint128 pot, ) = IDIAOracleV2(KURS_DIA).getValue("tPOT/pUSD"); // Portaldot's own price</code></pre>
+          </figure>
+          <figure>
+            <figcaption>Pyth's pull flow, with a Kurs signed bundle from /api/bundle</figcaption>
+            <pre tabindex="0"><code>bytes[] memory upd = new bytes[](1);
+upd[0] = bundlePayload; // GET /api/bundle?pair=BTC/USD -> payload
+IPyth(KURS_PYTH).updatePriceFeeds(upd);   // fee 0, signatures checked on chain
+PythStructs.Price memory p = IPyth(KURS_PYTH).getPrice(keccak256("BTC/USD"));</code></pre>
+          </figure>
         </div>
+        <p class="also">The same signed rounds also answer Band <code>getReferenceData</code>, API3 <code>read()</code>, Chronicle <code>readWithAge()</code>, Aave v3 <code>getAssetPrice</code>, ERC-7726 <code>getQuote</code> and Morpho Blue <code>price()</code> on Sepolia, and agents can use the <a href="/api/mcp">MCP server</a> or pay per bundle with <a href="/api/x402?pair=USD/IDR">x402</a>. Addresses: <a href="https://github.com/PugarHuda/kurs#ways-to-read-kurs">README</a>, <a href="/llms.txt">llms.txt</a>.</p>
       </section>
     </main>
 

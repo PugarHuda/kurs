@@ -551,6 +551,12 @@ td.bad {
   margin-bottom: 0.4rem;
 }
 
+.use .also {
+  margin-top: 1.25rem;
+  max-width: 80ch;
+  font-size: 0.9375rem;
+}
+
 .code-grid pre {
   margin: 0;
   background: var(--board);
