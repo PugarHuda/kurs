@@ -9,6 +9,8 @@ Feeds: BTC/USD, ETH/USD, DOT/USD, USDT/USD, USD/IDR, TSLA/USD, NVDA/USD, AAPL/US
 - [OpenAPI 3.1 spec](https://kurs-ten-zeta.vercel.app/openapi.json): all endpoints below
 - [/api/feeds](https://kurs-ten-zeta.vercel.app/api/feeds): feed catalogue, ids, sources, AggregatorV3 addresses
 - [/api/bundle?pair=USD/IDR](https://kurs-ten-zeta.vercel.app/api/bundle?pair=USD/IDR): freshly signed bundle; `payload` goes to KursOracle.fulfillOracleQuery (ERC-7412) or KursPyth.updatePriceFeeds
+- [/api/x402?pair=USD/IDR](https://kurs-ten-zeta.vercel.app/api/x402?pair=USD/IDR): the same bundle behind x402 (HTTP 402, 0.001 USDC on Base Sepolia, exact scheme)
+- [/api/metrics](https://kurs-ten-zeta.vercel.app/api/metrics): Prometheus metrics (feed age, answer, freshness, relayer balance)
 - [/api/health](https://kurs-ten-zeta.vercel.app/api/health): age of every feed on every network
 - [/api/history?net=portaldot&pair=USD/IDR](https://kurs-ten-zeta.vercel.app/api/history?net=portaldot&pair=USD/IDR): every round since deployment
 - [/api/substrate](https://kurs-ten-zeta.vercel.app/api/substrate): Portaldot prices read through the Substrate runtime API ReviveApi_call
