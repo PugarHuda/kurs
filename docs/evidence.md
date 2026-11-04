@@ -151,6 +151,19 @@ Reporters (quorum 3 of 5): [`0x5Fd0d3Ab…a21F05`](https://sepolia.etherscan.io/
 
 Deployed and read by `reporter/scripts/deploy-compat.ts`; the full output, with block number and every returned value, is [`docs/compat-sepolia.txt`](compat-sepolia.txt). All six are Sourcify exact matches.
 
+### Euler, Silo and TWAP views (read live)
+
+Deployed and read by `reporter/scripts/deploy-lending.ts`; full output with block number: [`docs/lending-sepolia.txt`](lending-sepolia.txt). All four are Sourcify exact matches.
+
+| Contract | Address | Live read |
+|---|---|---|
+| KursQuoteOracle v2: ERC-7726 + Euler `IPriceOracle` | `0xc1764dea11e988cecdb5b7c92811fbbfe3550316` | `getQuotes(1e8, BTC, IDR)` = bid = ask = 1 BTC in Rupiah |
+| KursSiloOracle: Silo v2 `ISiloOracle`, quote token IDR | `0xd43c69cb8b474772eeb4b8132a54fc44044992c3` | `quote(1e8, BTC)` = the same Rupiah value |
+| KursTwap BTC/USD | `0x2f4385f565568b8f835ed8419f02b99bd0754f15` | `consult(600)` = the latest round; `consult(3600)` reverts `WindowTooLong` until an hour of history exists |
+| KursTwap USD/IDR | `0x4738a3f8931918fc0c56cad53f65e2f4a508fadb` | as above; the relay pokes both after every round (`pokeTwaps` in `reporter/src/chain.ts`) |
+
+KursQuoteOracle v1 (`0x787e4f515d1affa6a3dff10ee953f236db90cf30`, ERC-7726 only) stays live: KursMorphoOracle was built on it.
+
 ### Pyth and Morpho views (read live)
 
 | Call | Result |
@@ -238,6 +251,10 @@ Sepolia contracts are verified on Sourcify with an exact match:
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x4642c5d754195847ae94b5ab7032a16c41ab5cd6/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x32559c5874d123cf5f173bf822ba7a1e83cf07e0/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x7135784d38e360c37980fc2cf2840212a07f938e/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0xc1764dea11e988cecdb5b7c92811fbbfe3550316/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0xd43c69cb8b474772eeb4b8132a54fc44044992c3/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0x2f4385f565568b8f835ed8419f02b99bd0754f15/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0x4738a3f8931918fc0c56cad53f65e2f4a508fadb/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73/
 
 To check any deployment yourself: `cd contracts && forge build`, then compare `out/KursOracle.sol/KursOracle.json` deployedBytecode with `eth_getCode` at the oracle address (immutables differ only in DOMAIN_SEPARATOR).

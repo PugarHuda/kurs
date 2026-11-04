@@ -34,6 +34,18 @@ const hashes = await writeWithFreshPrice(client, wallet, {
 });
 ```
 
+## Trust nothing: check freshness and signatures yourself
+
+```ts
+import { getPrice, fetchBundle, verifyBundle, getTwap, StalePriceError } from "kurs-oracle";
+
+await getPrice(client, "USD/IDR", { maxAge: 3600 }); // throws StalePriceError if the round is older (same rule as latestRoundFresh)
+const check = await verifyBundle(client, await fetchBundle("USD/IDR"));
+// check.ok: at least `quorum` distinct current reporters (read from the oracle on chain) signed it
+// check.observations: every recovered EIP-712 signer; check.median: what the contract will store
+const { price } = await getTwap(sepoliaClient, "BTC/USD", 3600); // 1 h time-weighted average from KursTwap
+```
+
 `fetchBundle(pair)` gives the raw signed payload: pass it to `KursOracle.fulfillOracleQuery`, or as an element of `KursPyth.updatePriceFeeds` on a Pyth-style integration.
 
 ## Other interfaces, same prices
@@ -41,7 +53,10 @@ const hashes = await writeWithFreshPrice(client, wallet, {
 | ABI export | Contract |
 |---|---|
 | `kursAggregatorAbi`, `kursAggregatorV2V3Abi` | Chainlink AggregatorV3 / V2 per feed (`networks.*.aggregators`, `aggregatorsV2`) |
-| `kursQuoteAbi` | ERC-7726 `getQuote` (`networks.sepolia.quoteOracle`) |
+| `kursQuoteAbi` | ERC-7726 `getQuote` + Euler `IPriceOracle` (`name`, `getQuotes`) (`networks.sepolia.quoteOracle`) |
+| `kursSiloOracleAbi` | Silo v2 `ISiloOracle` (`networks.sepolia.siloOracle`) |
+| `kursTwapAbi` | TWAP `consult(window)`, `observe(secondsAgos)` (`networks.sepolia.twap`) |
+| `kursDiaAbi`, `kursBandAbi`, `kursApi3Abi`, `kursChronicleAbi`, `kursAaveOracleAbi` | DIA `getValue`, Band `getReferenceData`, API3 `read`, Chronicle `readWithAge`, Aave v3 `getAssetPrice` (`networks.*.dia`, `band`, `api3`, `chronicle`, `aaveOracle`) |
 | `kursPythAbi` | Pyth `IPyth` (`networks.sepolia.pyth`) |
 | `kursMorphoOracleAbi` | Morpho Blue `IOracle` (`networks.sepolia.morphoOracleBtcIdr`) |
 

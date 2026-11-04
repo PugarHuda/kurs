@@ -7,7 +7,7 @@ import type { Hex } from "viem";
 import { FEEDS } from "./feeds.js";
 import { encodeFunctionData, parseEventLogs } from "viem";
 import { kursConverterAbi } from "./abi.js";
-import { configure, deploy, relayExact, SLOT_ALIGNED, transmit, type TransmitResult } from "./chain.js";
+import { configure, deploy, pokeTwaps, relayExact, SLOT_ALIGNED, transmit, type TransmitResult } from "./chain.js";
 import { converterOf, sendWithFreshPrice } from "./pull.js";
 import {
   CHAINS,
@@ -103,6 +103,7 @@ async function tick() {
     const res = await transmit(chain, deployer(), obs, FEEDS, { resign });
     res.forEach(print);
     if (SLOT_ALIGNED[chain]) mirrored.push(...res.flatMap((r) => (r.bundle ? [r.bundle] : [])));
+    (await pokeTwaps(chain, deployer())).forEach((l) => console.log(l));
   }
 }
 

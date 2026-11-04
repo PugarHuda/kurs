@@ -65,3 +65,10 @@ All 9 proofs PASS in CI (halmos 0.3.3, `--loop 6`, one job per proof,
 (3- and 4-observation times are from a local run, 5-observation from CI.) An earlier
 single-job run timed out at 2 h with no result because the test's own helpers branched
 per element; they are now branch-free (assembly `eq`/`slt`).
+
+## KursTwap: what the average does and does not protect
+
+- `poke()` is permissionless and only records the oracle's own latest round, so a caller can choose *when* a round is recorded but not *what*: the price is the signed median, and its weight starts at the round's on-chain `updatedAt`, not at the poke. Poking late, or poking twice, changes nothing (tested: `test_twapTimeWeightsRounds`).
+- A round that is overwritten before anyone pokes is missed, and the previous price is extended over its time. The relay pokes after every round it sends (`pokeTwaps`), and anyone else can.
+- History is 48 observations; `consult` and `observe` revert `WindowTooLong` rather than extrapolate past the oldest one (tested, including the ring wrap: `test_twapRingWraps`).
+- `oldest()` is the first observation's time, so a window that starts before the first poke reverts until enough history exists, as on Sepolia right after deployment.

@@ -6,6 +6,7 @@ import {
   encodeFunctionData,
   keccak256,
   parseAbi,
+  recoverTypedDataAddress,
   toBytes,
   type Account,
   type Address,
@@ -16,7 +17,7 @@ import {
   type WalletClient,
 } from "viem";
 import { sepolia } from "viem/chains";
-import { deployments, kursOracleAbi } from "./generated.js";
+import { deployments, kursOracleAbi, kursTwapAbi } from "./generated.js";
 
 export * from "./generated.js";
 
@@ -66,8 +67,20 @@ export interface Price {
   updatedAt: number;
 }
 
-/** Latest signed round of `pair`, read from the KursOracle contract. */
-export async function getPrice(client: PublicClient<Transport, Chain | undefined>, pair: string, opts: { network?: Network } = {}): Promise<Price> {
+/** Thrown by getPrice({ maxAge }) when the newest observation is older than maxAge. */
+export class StalePriceError extends Error {
+  constructor(public pair: string, public ageSeconds: number, public maxAge: number) {
+    super(`${pair} is ${ageSeconds}s old, older than maxAge ${maxAge}s`);
+    this.name = "StalePriceError";
+  }
+}
+
+/**
+ * Latest signed round of `pair`, read from the KursOracle contract. With `maxAge`
+ * (seconds) it throws StalePriceError when the oldest observation in the round is older,
+ * the same rule as the contract's latestRoundFresh.
+ */
+export async function getPrice(client: PublicClient<Transport, Chain | undefined>, pair: string, opts: { network?: Network; maxAge?: number } = {}): Promise<Price> {
   const net = networks[networkOf(client, opts.network)];
   const id = feedId(pair);
   const [[roundId, answer, observedAt, updatedAt], feed] = await Promise.all([
@@ -75,6 +88,10 @@ export async function getPrice(client: PublicClient<Transport, Chain | undefined
     client.readContract({ address: net.oracle, abi: kursOracleAbi, functionName: "feed", args: [id] }),
   ]);
   if (roundId === 0n) throw new Error(`${pair} has no round yet`);
+  if (opts.maxAge !== undefined) {
+    const age = Math.floor(Date.now() / 1000) - Number(observedAt);
+    if (age > opts.maxAge) throw new StalePriceError(pair, age, opts.maxAge);
+  }
   return { pair, price: Number(answer) / 10 ** feed.decimals, answer, decimals: feed.decimals, roundId, observedAt: Number(observedAt), updatedAt: Number(updatedAt) };
 }
 
@@ -93,6 +110,89 @@ export async function fetchBundle(pair: string, opts: { api?: string; signal?: A
   const b = (await r.json()) as { roundId: string; answer: string; payload: Hex };
   if (!/^0x[0-9a-fA-F]+$/.test(b.payload ?? "")) throw new Error("bundle API returned no payload");
   return { pair, roundId: BigInt(b.roundId), answer: BigInt(b.answer), payload: b.payload };
+}
+
+/** EIP-712 domain and type the reporters sign. No chainId: one bundle verifies on every chain. */
+export const DOMAIN = { name: "Kurs", version: "1" } as const;
+export const TYPES = {
+  Observation: [
+    { name: "feedId", type: "bytes32" },
+    { name: "roundId", type: "uint80" },
+    { name: "answer", type: "int192" },
+    { name: "observedAt", type: "uint64" },
+  ],
+} as const;
+
+const payloadParams = [
+  { type: "bytes32" },
+  { type: "uint80" },
+  { type: "tuple[]", components: [{ name: "answer", type: "int192" }, { name: "observedAt", type: "uint64" }, { name: "v", type: "uint8" }, { name: "r", type: "bytes32" }, { name: "s", type: "bytes32" }] },
+] as const;
+
+export interface BundleCheck {
+  /** at least `quorum` distinct current reporters signed this round */
+  ok: boolean;
+  pair: string | undefined;
+  feedId: Hex;
+  roundId: bigint;
+  quorum: number;
+  /** the oracle's current reporter set on this network */
+  reporters: readonly Address[];
+  observations: { signer: Address; answer: bigint; observedAt: number; isReporter: boolean }[];
+  /** median of the answers signed by distinct current reporters, as the contract computes it */
+  median: bigint | undefined;
+}
+
+/**
+ * Checks a signed bundle without trusting the API that served it: recovers every
+ * EIP-712 signer and compares them with the reporter set and quorum read from the
+ * oracle on chain. It does not check freshness or the spread limit; the contract does
+ * that when the bundle is submitted.
+ */
+export async function verifyBundle(client: PublicClient<Transport, Chain | undefined>, bundle: Bundle | Hex, opts: { network?: Network } = {}): Promise<BundleCheck> {
+  const net = networks[networkOf(client, opts.network)];
+  const payload = typeof bundle === "string" ? bundle : bundle.payload;
+  const [id, roundId, obs] = decodeAbiParameters(payloadParams, payload);
+  const [reporters, quorum] = await Promise.all([
+    client.readContract({ address: net.oracle, abi: kursOracleAbi, functionName: "reporters" }),
+    client.readContract({ address: net.oracle, abi: kursOracleAbi, functionName: "quorum" }),
+  ]);
+  const set = new Set(reporters.map((r) => r.toLowerCase()));
+  const observations = await Promise.all(
+    obs.map(async (o) => {
+      const signer = await recoverTypedDataAddress({
+        domain: DOMAIN,
+        types: TYPES,
+        primaryType: "Observation",
+        message: { feedId: id, roundId, answer: o.answer, observedAt: o.observedAt },
+        signature: `${o.r}${o.s.slice(2)}${o.v.toString(16).padStart(2, "0")}` as Hex,
+      });
+      return { signer, answer: o.answer, observedAt: Number(o.observedAt), isReporter: set.has(signer.toLowerCase()) };
+    }),
+  );
+  const seen = new Set<string>();
+  const valid = observations.filter((o) => o.isReporter && !seen.has(o.signer.toLowerCase()) && seen.add(o.signer.toLowerCase()));
+  const a = valid.map((o) => o.answer).sort((x, y) => (x < y ? -1 : x > y ? 1 : 0));
+  const m = a.length >> 1;
+  const median = a.length === 0 ? undefined : a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2n;
+  return { ok: valid.length >= quorum, pair: PAIRS.find((p) => feedId(p) === id), feedId: id, roundId, quorum, reporters, observations, median };
+}
+
+/**
+ * Time-weighted average of `pair` over the last `window` seconds from its KursTwap
+ * contract (Sepolia: BTC/USD and USD/IDR). Reverts on chain when the TWAP's history
+ * does not reach back that far.
+ */
+export async function getTwap(client: PublicClient<Transport, Chain | undefined>, pair: string, window: number, opts: { network?: Network } = {}) {
+  const net = networks[networkOf(client, opts.network)] as { oracle: Address; twap?: Record<string, Address> };
+  const address = net.twap?.[pair];
+  if (!address) throw new Error(`no KursTwap for ${pair} on this network`);
+  const [answer, oldest, feed] = await Promise.all([
+    client.readContract({ address, abi: kursTwapAbi, functionName: "consult", args: [window] }),
+    client.readContract({ address, abi: kursTwapAbi, functionName: "oldest" }),
+    client.readContract({ address: net.oracle, abi: kursOracleAbi, functionName: "feed", args: [feedId(pair)] }),
+  ]);
+  return { pair, window, answer, price: Number(answer) / 10 ** feed.decimals, oldest: Number(oldest), twap: address };
 }
 
 export const MULTICALL3: Address = "0xcA11bde05977b3631167028862bE2a173976CA11";

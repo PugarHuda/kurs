@@ -117,7 +117,7 @@ IPyth(KURS_PYTH).updatePriceFeeds(upd);   // fee 0, signatures checked on chain
 PythStructs.Price memory p = IPyth(KURS_PYTH).getPrice(keccak256("BTC/USD"));</code></pre>
           </figure>
         </div>
-        <p class="also">The same signed rounds also answer Band <code>getReferenceData</code>, API3 <code>read()</code>, Chronicle <code>readWithAge()</code>, Aave v3 <code>getAssetPrice</code>, ERC-7726 <code>getQuote</code> and Morpho Blue <code>price()</code> on Sepolia, and agents can use the <a href="/api/mcp">MCP server</a> or pay per bundle with <a href="/api/x402?pair=USD/IDR">x402</a>. Addresses: <a href="https://github.com/PugarHuda/kurs#ways-to-read-kurs">README</a>, <a href="/llms.txt">llms.txt</a>.</p>
+        <p class="also">The same signed rounds also answer Band <code>getReferenceData</code>, API3 <code>read()</code>, Chronicle <code>readWithAge()</code>, Aave v3 <code>getAssetPrice</code>, ERC-7726 <code>getQuote</code>, Euler <code>getQuotes</code>, Silo v2 <code>quote</code>, Morpho Blue <code>price()</code> and a time-weighted average (<code>KursTwap.consult</code>) on Sepolia, and agents can use the <a href="/api/mcp">MCP server</a> (it also verifies a bundle's signatures against the on-chain reporter set) or pay per bundle with <a href="/api/x402?pair=USD/IDR">x402</a>. Addresses: <a href="https://github.com/PugarHuda/kurs#ways-to-read-kurs">README</a>, <a href="/llms.txt">llms.txt</a>.</p>
       </section>
     </main>
 

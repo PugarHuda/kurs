@@ -163,7 +163,8 @@
                 "sepolia"
               ],
               "default": "portaldot"
-            }
+            },
+            "description": "Network. `network` and `chain` are accepted as aliases; an unknown value is a 400."
           },
           {
             "$ref": "#/components/parameters/Pair"
@@ -288,7 +289,8 @@
             "tPOT/pUSD"
           ]
         },
-        "example": "USD/IDR"
+        "example": "USD/IDR",
+        "description": "Canonical spelling is listed; case-insensitive input with /, - or _ is accepted (usd-idr, BTC_USD) and the response uses the canonical pair."
       }
     },
     "responses": {

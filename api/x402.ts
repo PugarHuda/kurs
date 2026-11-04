@@ -7,7 +7,7 @@
 // the bundle is built, then the payment is settled and X-PAYMENT-RESPONSE returned.
 // ponytail: settles before returning; a failed settle returns 402 and no bundle.
 import { GET as bundle } from "./bundle.js";
-import { FEEDS } from "../reporter/src/feeds.js";
+import { FEEDS, findFeed } from "../reporter/src/feeds.js";
 
 const FACILITATOR = process.env.X402_FACILITATOR ?? "https://x402.org/facilitator";
 const PAY_TO = "0x1d63E7A1cC358Cb40Aa6073b7c44Fd3c916b2540";
@@ -50,8 +50,9 @@ async function facilitator(path: "verify" | "settle", paymentPayload: unknown, p
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const pair = url.searchParams.get("pair") ?? "";
-  if (!FEEDS.some((f) => f.pair === pair)) return reply(400, { error: `unknown pair "${pair}"`, pairs: FEEDS.map((f) => f.pair) });
+  const asked = url.searchParams.get("pair") ?? "";
+  const pair = findFeed(asked)?.pair;
+  if (!pair) return reply(400, { error: `unknown pair "${asked}"`, pairs: FEEDS.map((f) => f.pair) });
   const req = requirements(url.toString(), pair);
   const header = request.headers.get("x-payment");
   if (!header) return reply(402, { x402Version: 1, error: "X-PAYMENT header is required", accepts: [req] });

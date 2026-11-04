@@ -4,7 +4,7 @@
 // passes to KursOracle.fulfillOracleQuery. The same bundle verifies on every chain.
 import { privateKeyToAccount } from "viem/accounts";
 import type { Hex } from "viem";
-import { FEEDS, feedId } from "../reporter/src/feeds.js";
+import { FEEDS, feedId, findFeed } from "../reporter/src/feeds.js";
 import { largestAgreeingWindow, observeAndSign, pullPayload, readFeed, toJson } from "../reporter/src/kurs.js";
 
 const reporterKeys = () =>
@@ -28,9 +28,10 @@ const json = (status: number, body: unknown, maxAge = 0) =>
   });
 
 export async function GET(request: Request) {
-  const pair = new URL(request.url).searchParams.get("pair") ?? "";
-  const feed = FEEDS.find((f) => f.pair === pair);
-  if (!feed) return json(400, { error: `unknown pair "${pair}"`, pairs: FEEDS.map((f) => f.pair) });
+  const asked = new URL(request.url).searchParams.get("pair") ?? "";
+  const feed = findFeed(asked);
+  if (!feed) return json(400, { error: `unknown pair "${asked}"`, pairs: FEEDS.map((f) => f.pair) });
+  const pair = feed.pair;
 
   const keys = reporterKeys();
   if (keys.length === 0) return json(503, { error: "no reporter keys configured on this deployment" });

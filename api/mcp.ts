@@ -5,7 +5,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
-import { createPublicClient, http, keccak256, parseAbi, toBytes, type Address } from "viem";
+import { createPublicClient, decodeAbiParameters, http, keccak256, parseAbi, recoverTypedDataAddress, toBytes, type Address, type Hex } from "viem";
+import { kursOracleAbi, kursTwapAbi } from "../reporter/src/abi.js";
+import { DOMAIN, TYPES } from "../reporter/src/eip712.js";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };
 import { FEEDS } from "../reporter/src/feeds.js";
@@ -35,17 +37,65 @@ async function latest(net: keyof typeof NETS, pair: string) {
     roundId: roundId.toString(),
     observedAt: new Date(Number(observedAt) * 1000).toISOString(),
     updatedAt: new Date(Number(updatedAt) * 1000).toISOString(),
-    ageSeconds: Math.floor(Date.now() / 1000) - Number(updatedAt),
+    // age of the oldest observation in the round, the contract's latestRoundFresh rule
+    ageSeconds: Math.floor(Date.now() / 1000) - Number(observedAt),
+    heartbeatSeconds: f.heartbeat,
+    // the dashboard's rule: older than 1.5x the heartbeat (Portaldot's slot-aligned relay: at least 64 min)
+    stale: Math.floor(Date.now() / 1000) - Number(updatedAt) > 1.5 * Math.max(f.heartbeat, net === "portaldot" ? 3840 : 0),
     oracle: n.d.oracle,
   };
 }
 
-/** USD value of one unit of `asset`, from X/USD or USD/X feeds. */
-async function usdPer(net: keyof typeof NETS, asset: string) {
-  if (asset === "USD") return { usd: 1, used: [] as string[] };
-  if (pairs.includes(`${asset}/USD`)) return { usd: (await latest(net, `${asset}/USD`)).price, used: [`${asset}/USD`] };
-  if (pairs.includes(`USD/${asset}`)) return { usd: 1 / (await latest(net, `USD/${asset}`)).price, used: [`USD/${asset}`] };
-  throw new Error(`no USD feed for ${asset}`);
+type Latest = Awaited<ReturnType<typeof latest>>;
+const legs = FEEDS.map((f) => f.pair.split("/") as [string, string]);
+/** canonical spelling of an asset symbol ("tpot" -> "tPOT"), or the input if no feed has it */
+const asset = (x: string) => legs.flat().find((a) => a.toUpperCase() === x.trim().toUpperCase()) ?? x.trim().toUpperCase();
+
+/**
+ * Units of `to` per one `from`: a direct feed (from/to), its inverse (to/from), or a
+ * pivot through USD (from/USD or USD/from, then the same for to). Returns the rounds used.
+ */
+async function rate(net: keyof typeof NETS, from: string, to: string): Promise<{ rate: number; rounds: Latest[] }> {
+  if (from === to) return { rate: 1, rounds: [] };
+  if (pairs.includes(`${from}/${to}`)) {
+    const r = await latest(net, `${from}/${to}`);
+    return { rate: r.price, rounds: [r] };
+  }
+  if (pairs.includes(`${to}/${from}`)) {
+    const r = await latest(net, `${to}/${from}`);
+    return { rate: 1 / r.price, rounds: [r] };
+  }
+  const direct = (a: string, b: string) => pairs.includes(`${a}/${b}`) || pairs.includes(`${b}/${a}`);
+  if (from !== "USD" && to !== "USD" && direct(from, "USD") && direct("USD", to)) {
+    const [a, b] = await Promise.all([rate(net, from, "USD"), rate(net, "USD", to)]);
+    return { rate: a.rate * b.rate, rounds: [...a.rounds, ...b.rounds] };
+  }
+  throw new Error(`no Kurs feed path from ${from} to ${to}`);
+}
+
+const payloadParams = [
+  { type: "bytes32" },
+  { type: "uint80" },
+  { type: "tuple[]", components: [{ name: "answer", type: "int192" }, { name: "observedAt", type: "uint64" }, { name: "v", type: "uint8" }, { name: "r", type: "bytes32" }, { name: "s", type: "bytes32" }] },
+] as const;
+
+/** Decodes a fulfillOracleQuery payload and recovers each observation's EIP-712 signer. */
+async function recoverPayload(payload: Hex) {
+  const [feedId, roundId, obs] = decodeAbiParameters(payloadParams, payload);
+  const observations = await Promise.all(
+    obs.map(async (o) => ({
+      signer: await recoverTypedDataAddress({
+        domain: DOMAIN,
+        types: TYPES,
+        primaryType: "Observation",
+        message: { feedId, roundId, answer: o.answer, observedAt: o.observedAt },
+        signature: `${o.r}${o.s.slice(2)}${o.v.toString(16).padStart(2, "0")}` as Hex,
+      }),
+      answer: o.answer,
+      observedAt: Number(o.observedAt),
+    })),
+  );
+  return { feedId, roundId, observations };
 }
 
 function server() {
@@ -84,13 +134,32 @@ function server() {
     "convert",
     {
       title: "Convert an amount",
-      description: "Convert between assets using on-chain Kurs prices, pivoting through USD (e.g. 100 USD to IDR, 1 BTC to IDR, 10 NVDA to ETH). Assets: USD and every base or quote of a USD feed.",
-      inputSchema: { amount: z.number().positive(), from: z.string().toUpperCase(), to: z.string().toUpperCase(), network: Net },
+      description:
+        "Convert between assets using on-chain Kurs prices: a direct feed, its inverse, or a pivot through USD (e.g. 100 USD to IDR, 1 BTC to IDR, 10 NVDA to ETH, 50 tPOT to pUSD). Symbols are case-insensitive. Every round used is returned with its age; set maxAgeSeconds to refuse a conversion that would use an older price.",
+      inputSchema: {
+        amount: z.number().positive(),
+        from: z.string().min(1),
+        to: z.string().min(1),
+        network: Net,
+        maxAgeSeconds: z.number().int().positive().optional().describe("refuse if any price used is older than this"),
+      },
     },
-    async ({ amount, from, to, network }) => {
+    async ({ amount, from, to, network, maxAgeSeconds }) => {
       try {
-        const [a, b] = await Promise.all([usdPer(network, from), usdPer(network, to)]);
-        return text({ amount, from, to, result: (amount * a.usd) / b.usd, network, feedsUsed: [...a.used, ...b.used] });
+        const [f, t] = [asset(from), asset(to)];
+        const { rate: r, rounds } = await rate(network, f, t);
+        const tooOld = maxAgeSeconds === undefined ? [] : rounds.filter((x) => x.ageSeconds > maxAgeSeconds);
+        if (tooOld.length)
+          return fail(`refused: ${tooOld.map((x) => `${x.pair} is ${x.ageSeconds}s old`).join(", ")} (maxAgeSeconds ${maxAgeSeconds}). Pull a fresh bundle with get_signed_bundle.`);
+        return text({
+          amount,
+          from: f,
+          to: t,
+          result: amount * r,
+          rate: r,
+          network,
+          feedsUsed: rounds.map((x) => ({ pair: x.pair, price: x.price, roundId: x.roundId, ageSeconds: x.ageSeconds, stale: x.stale })),
+        });
       } catch (e) {
         return fail((e as Error).message.split("\n")[0]);
       }
@@ -118,6 +187,93 @@ function server() {
       const r = await bundleGET(new Request(`https://kurs.local/api/bundle?pair=${encodeURIComponent(pair)}`));
       const body = await r.json();
       return r.ok ? text({ pair: body.pair, roundId: body.roundId, answer: body.answer, decimals: body.decimals, reporters: body.reporters, payload: body.payload }) : fail(body.error ?? `bundle: HTTP ${r.status}`);
+    },
+  );
+  s.registerTool(
+    "verify_bundle",
+    {
+      title: "Verify a signed bundle",
+      description:
+        "Check a Kurs bundle payload (from get_signed_bundle, /api/bundle or anyone else) without trusting its source: recover every EIP-712 signer and compare with the reporter set and quorum read from the oracle on chain.",
+      inputSchema: { payload: z.string().regex(/^0x[0-9a-fA-F]+$/), network: Net },
+    },
+    async ({ payload, network }) => {
+      let v;
+      try {
+        v = await recoverPayload(payload as Hex);
+      } catch (e) {
+        return fail(`not a Kurs bundle payload: ${(e as Error).message.split("\n")[0]}`);
+      }
+      try {
+        const n = NETS[network];
+        const c = createPublicClient({ transport: http(n.rpc, { retryCount: 2 }) });
+        const [reporters, quorum] = await Promise.all([
+          c.readContract({ address: n.d.oracle as Address, abi: kursOracleAbi, functionName: "reporters" }),
+          c.readContract({ address: n.d.oracle as Address, abi: kursOracleAbi, functionName: "quorum" }),
+        ]);
+        const set = new Set(reporters.map((r) => r.toLowerCase()));
+        const good = new Set(v.observations.map((o) => o.signer.toLowerCase()).filter((a) => set.has(a)));
+        const f = FEEDS.find((x) => keccak256(toBytes(x.pair)) === v.feedId);
+        // the median the contract would store: distinct current reporters only
+        const seen = new Set<string>();
+        const answers = v.observations
+          .filter((o) => set.has(o.signer.toLowerCase()) && !seen.has(o.signer.toLowerCase()) && seen.add(o.signer.toLowerCase()))
+          .map((o) => o.answer)
+          .sort((x, y) => (x < y ? -1 : x > y ? 1 : 0));
+        const m = answers.length >> 1;
+        const median = answers.length === 0 ? undefined : answers.length % 2 ? answers[m] : (answers[m - 1] + answers[m]) / 2n;
+        return text({
+          valid: good.size >= quorum,
+          network,
+          pair: f?.pair ?? null,
+          roundId: v.roundId.toString(),
+          quorum,
+          distinctReporters: good.size,
+          median: median === undefined ? null : f ? Number(median) / 10 ** f.decimals : median.toString(),
+          observations: v.observations.map((o) => ({
+            signer: o.signer,
+            isReporter: set.has(o.signer.toLowerCase()),
+            answer: o.answer.toString(),
+            observedAt: new Date(o.observedAt * 1000).toISOString(),
+          })),
+        });
+      } catch (e) {
+        return fail((e as Error).message.split("\n")[0]);
+      }
+    },
+  );
+
+  s.registerTool(
+    "get_twap",
+    {
+      title: "Time-weighted average price",
+      description:
+        "Time-weighted average of a feed over the last windowSeconds, from its KursTwap contract on Sepolia (BTC/USD, USD/IDR). One round moves it far less than it moves the latest price.",
+      inputSchema: { pair: z.enum(["BTC/USD", "USD/IDR"]), windowSeconds: z.number().int().min(60).max(172_800) },
+    },
+    async ({ pair, windowSeconds }) => {
+      const address = (sepolia as { twap?: Record<string, string> }).twap?.[pair] as Address | undefined;
+      if (!address) return fail(`no KursTwap for ${pair}`);
+      try {
+        const c = createPublicClient({ transport: http(NETS.sepolia.rpc, { retryCount: 2 }) });
+        const [avg, oldest, spot] = await Promise.all([
+          c.readContract({ address, abi: kursTwapAbi, functionName: "consult", args: [windowSeconds] }),
+          c.readContract({ address, abi: kursTwapAbi, functionName: "oldest" }),
+          latest("sepolia", pair),
+        ]);
+        const d = FEEDS.find((x) => x.pair === pair)!.decimals;
+        return text({
+          network: "sepolia",
+          pair,
+          windowSeconds,
+          twap: Number(avg) / 10 ** d,
+          latest: spot.price,
+          historyFrom: new Date(Number(oldest) * 1000).toISOString(),
+          twapContract: address,
+        });
+      } catch (e) {
+        return fail(`${(e as Error).message.split("\n")[0]} (the TWAP history may not reach back windowSeconds yet)`);
+      }
     },
   );
   return s;

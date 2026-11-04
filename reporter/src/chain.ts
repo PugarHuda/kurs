@@ -18,6 +18,7 @@ import {
   kursFactoryBytecode,
   kursOracleAbi,
   kursOracleBytecode,
+  kursTwapAbi,
 } from "./abi.js";
 import { FEEDS, feedId, type FeedConfig } from "./feeds.js";
 import { CHAINS, selectBundle, type ChainKey, type SignedObservation } from "./kurs.js";
@@ -33,6 +34,8 @@ export interface Deployment {
   aggregators: Record<string, Address>;
   /** KursConverter (ERC-7412 pull consumer) for USD/IDR */
   converter?: Address;
+  /** KursTwap per pair, poked after each round */
+  twap?: Record<string, Address>;
   reporters: Address[];
   quorum: number;
   txs: Record<string, Hex>;
@@ -385,4 +388,29 @@ export async function relayExact(
     }
   }
   return results;
+}
+
+/**
+ * Records each new round in the chain's KursTwap contracts. poke() is permissionless and
+ * returns false when the round is already recorded, so it is simulated first and only
+ * sent when it would write. A failure is reported, never thrown: the TWAP is a
+ * consumer, the oracle relay must not stop for it.
+ */
+export async function pokeTwaps(chain: ChainKey, account: LocalAccount): Promise<string[]> {
+  const d = loadDeployment(chain);
+  if (!d?.twap) return [];
+  const { pub, wallet } = clients(chain, account);
+  const out: string[] = [];
+  for (const [pair, address] of Object.entries(d.twap)) {
+    try {
+      const { result, request } = await pub.simulateContract({ account, address, abi: kursTwapAbi, functionName: "poke" });
+      if (!result) continue;
+      const hash = await wallet!.writeContract(request);
+      const rc = await pub.waitForTransactionReceipt({ hash, timeout: 180_000 });
+      out.push(`${chain.padEnd(9)} twap ${pair.padEnd(10)} poke ${rc.status} tx ${hash}`);
+    } catch (e) {
+      out.push(`${chain.padEnd(9)} twap ${pair.padEnd(10)} ERROR ${(e as Error).message.split("\n")[0].slice(0, 160)}`);
+    }
+  }
+  return out;
 }

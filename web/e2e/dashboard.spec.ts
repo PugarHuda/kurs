@@ -162,11 +162,41 @@ test("/api/mcp is an MCP server whose tools return on-chain prices", async ({ re
   const init = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "e2e", version: "1" } });
   expect(init.serverInfo.name).toBe("kurs");
   const { tools } = await rpc("tools/list");
-  expect(tools.map((t: { name: string }) => t.name).sort()).toEqual(["convert", "get_history", "get_price", "get_signed_bundle", "list_feeds"]);
+  expect(tools.map((t: { name: string }) => t.name).sort()).toEqual(["convert", "get_history", "get_price", "get_signed_bundle", "get_twap", "list_feeds", "verify_bundle"]);
   const price = JSON.parse((await rpc("tools/call", { name: "get_price", arguments: { pair: "USD/IDR", network: "sepolia" } })).content[0].text);
   expect(price.price).toBeGreaterThan(10_000);
   const conv = JSON.parse((await rpc("tools/call", { name: "convert", arguments: { amount: 100, from: "USD", to: "IDR", network: "sepolia" } })).content[0].text);
   expect(conv.result).toBeCloseTo(100 * price.price, 0);
+  expect(conv.feedsUsed[0]).toMatchObject({ pair: "USD/IDR", stale: false });
+  // case-insensitive symbols and a direct non-USD feed: Portaldot's own tPOT/pUSD
+  const pot = JSON.parse((await rpc("tools/call", { name: "convert", arguments: { amount: 10, from: "tpot", to: "PUSD" } })).content[0].text);
+  expect(pot).toMatchObject({ from: "tPOT", to: "pUSD" });
+  expect(pot.result).toBeGreaterThan(0);
+  // maxAgeSeconds refuses a conversion on an old price instead of answering with it
+  const old = await rpc("tools/call", { name: "convert", arguments: { amount: 1, from: "USD", to: "IDR", maxAgeSeconds: 1 } });
+  expect(old.isError).toBe(true);
+  expect(old.content[0].text).toMatch(/refused: USD\/IDR is \d+s old/);
+  // verify_bundle: a fresh bundle checks out against the on-chain reporter set; a tampered signature does not count
+  const bundle = JSON.parse((await rpc("tools/call", { name: "get_signed_bundle", arguments: { pair: "USD/IDR" } })).content[0].text);
+  const ok = JSON.parse((await rpc("tools/call", { name: "verify_bundle", arguments: { payload: bundle.payload, network: "sepolia" } })).content[0].text);
+  expect(ok).toMatchObject({ valid: true, pair: "USD/IDR", quorum: 3, distinctReporters: 5 });
+  const tampered = bundle.payload.slice(0, -2) + (bundle.payload.endsWith("00") ? "01" : "00");
+  const bad = JSON.parse((await rpc("tools/call", { name: "verify_bundle", arguments: { payload: tampered, network: "sepolia" } })).content[0].text);
+  expect(bad.distinctReporters).toBe(4);
+  // get_twap reads the KursTwap contract
+  const twap = JSON.parse((await rpc("tools/call", { name: "get_twap", arguments: { pair: "USD/IDR", windowSeconds: 300 } })).content[0].text);
+  expect(twap.twap).toBeGreaterThan(10_000);
+});
+
+test("pair names are case-insensitive and network aliases are honoured; unknown ones are a 400", async ({ request }) => {
+  const b = await request.get("/api/bundle?pair=usd-idr", { timeout: 60_000 });
+  expect(b.status()).toBe(200);
+  expect((await b.json()).pair).toBe("USD/IDR");
+  const h = await request.get("/api/history?network=sepolia&pair=btc_usd&limit=1", { timeout: 90_000 });
+  expect(h.status()).toBe(200);
+  expect(await h.json()).toMatchObject({ net: "sepolia", pair: "BTC/USD" });
+  expect((await request.get("/api/history?chain=evil&pair=BTC/USD")).status()).toBe(400);
+  expect((await request.get("/api/bundle?pair=BTC/EUR")).status()).toBe(400);
 });
 
 test("the dashboard is in English (no Indonesian UI copy)", async ({ page }) => {

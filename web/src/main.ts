@@ -1,7 +1,7 @@
 import "./style.css";
 import type { Address, Hex } from "viem";
 import { keccak256, toBytes } from "viem";
-import { FEEDS } from "../../reporter/src/feeds";
+import { FEEDS, findFeed } from "../../reporter/src/feeds";
 import { FEEDS as ALL_FEEDS } from "../../reporter/src/feeds";
 import { verifyBundlePayload, verifyRound, type CheckedObservation } from "./verify";
 import {
@@ -65,7 +65,9 @@ const bits = (bitmap: number, n: number) =>
 const params = new URLSearchParams(location.search);
 const deployments = DEPLOYMENTS.sort((a, b) => ["portaldot", "sepolia", "local"].indexOf(a.chain) - ["portaldot", "sepolia", "local"].indexOf(b.chain));
 let current: Deployment | undefined = deployments.find((d) => d.chain === params.get("net")) ?? deployments[0];
-let selected = params.get("feed") ?? "USD/IDR";
+// an unknown or oddly spelled feed (?feed=usd-idr) resolves like the API does, else USD/IDR
+let selected = findFeed(params.get("feed"))?.pair ?? "USD/IDR";
+if ((params.has("feed") && params.get("feed") !== selected) || (params.has("net") && params.get("net") !== current?.chain)) history.replaceState(null, "", `?net=${current?.chain ?? "portaldot"}&feed=${encodeURIComponent(selected)}`);
 let last: Snapshot | undefined;
 const others = new Map<string, Snapshot>();
 

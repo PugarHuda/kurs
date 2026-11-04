@@ -1,6 +1,6 @@
 {
   "name": "kurs-oracle",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Read Kurs signed price feeds (Portaldot V3, Sepolia) and pull fresh prices with ERC-7412, on viem. ABIs and live addresses included.",
   "type": "module",
   "main": "./dist/index.js",

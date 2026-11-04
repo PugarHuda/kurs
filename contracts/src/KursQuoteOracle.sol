@@ -15,6 +15,10 @@ import {KursOracle} from "./KursOracle.sol";
 /// Every price used must be younger than maxAge, else latestRoundFresh reverts with
 /// ERC-7412 OracleDataRequired and a client can pull a signed bundle first.
 /// Results round down. The pair table is fixed at construction: no owner.
+///
+/// Also Euler's IPriceOracle (euler-price-oracle), which ERC-7726 was derived from:
+/// name() and getQuotes() (bid = ask: a signed median has no spread), so an
+/// EulerRouter can route to it as a drop-in adapter.
 contract KursQuoteOracle {
     address public constant USD = address(840);
 
@@ -49,7 +53,21 @@ contract KursQuoteOracle {
         }
     }
 
-    function getQuote(uint256 baseAmount, address base, address quote) external view returns (uint256) {
+    function name() external pure returns (string memory) {
+        return "KursQuoteOracle";
+    }
+
+    /// Euler IPriceOracle: two-sided quote. Kurs stores one median per round, so bid == ask.
+    function getQuotes(uint256 inAmount, address base, address quote)
+        external
+        view
+        returns (uint256 bidOutAmount, uint256 askOutAmount)
+    {
+        bidOutAmount = getQuote(inAmount, base, quote);
+        askOutAmount = bidOutAmount;
+    }
+
+    function getQuote(uint256 baseAmount, address base, address quote) public view returns (uint256) {
         if (base == quote) return baseAmount;
         (bool ok, uint256 out) = _leg(baseAmount, base, quote);
         if (ok) return out;

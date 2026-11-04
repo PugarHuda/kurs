@@ -164,3 +164,10 @@ export const FEEDS: FeedConfig[] = [
 ];
 
 export const feedId = (pair: string): Hex => keccak256(toBytes(pair));
+
+/** The feed for user input: case-insensitive, "/", "-" or "_" between the assets
+ * ("usd-idr", "BTC_USD"). The canonical spelling is f.pair; feedId uses only that. */
+export const findFeed = (input: string | null | undefined): FeedConfig | undefined => {
+  const k = (input ?? "").trim().toUpperCase().replace(/[-_]/g, "/");
+  return FEEDS.find((f) => f.pair.toUpperCase() === k);
+};

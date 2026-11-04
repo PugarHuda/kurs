@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createPublicClient, http, decodeAbiParameters } from "viem";
-import { networks, getPrice, fetchBundle, feedId, PAIRS, kursOracleAbi } from "../dist/index.js";
+import { networks, getPrice, fetchBundle, feedId, PAIRS, kursOracleAbi, verifyBundle, StalePriceError, getTwap } from "../dist/index.js";
 
 const sepolia = createPublicClient({ chain: networks.sepolia.chain, transport: http("https://ethereum-sepolia-rpc.publicnode.com") });
 const portaldot = createPublicClient({ chain: networks.portaldot.chain, transport: http() });
@@ -27,4 +27,32 @@ test("fetchBundle returns a payload the oracle verifies (eth_call fulfillOracleQ
   const [id] = decodeAbiParameters([{ type: "bytes32" }], b.payload.slice(0, 66));
   assert.equal(id, feedId("BTC/USD"));
   await sepolia.simulateContract({ address: networks.sepolia.oracle, abi: kursOracleAbi, functionName: "fulfillOracleQuery", args: [b.payload] });
+});
+
+test("verifyBundle recovers every signer and matches the on-chain reporter set and quorum", async () => {
+  const b = await fetchBundle("USD/IDR");
+  for (const client of [sepolia, portaldot]) {
+    const v = await verifyBundle(client, b);
+    assert.equal(v.ok, true);
+    assert.equal(v.pair, "USD/IDR");
+    assert.ok(v.observations.length >= v.quorum);
+    assert.ok(v.observations.every((o) => o.isReporter));
+    assert.equal(v.median, b.answer);
+  }
+  // one flipped bit in a signature recovers a different address: not a reporter
+  const bad = b.payload.slice(0, -2) + (b.payload.endsWith("00") ? "01" : "00");
+  const v = await verifyBundle(sepolia, bad);
+  assert.ok(v.observations.some((o) => !o.isReporter));
+});
+
+test("getPrice({ maxAge }) throws StalePriceError on an old round", async () => {
+  await assert.rejects(getPrice(sepolia, "TSLA/USD", { maxAge: 1 }), StalePriceError);
+  const p = await getPrice(sepolia, "USD/IDR", { maxAge: 6 * 3600 });
+  assert.ok(p.price > 10_000);
+});
+
+test("getTwap reads the KursTwap time-weighted average on Sepolia", async () => {
+  const t = await getTwap(sepolia, "USD/IDR", 60);
+  assert.ok(t.price > 10_000 && t.price < 30_000, `twap ${t.price}`);
+  await assert.rejects(getTwap(sepolia, "USD/IDR", 30 * 24 * 3600)); // beyond its history
 });

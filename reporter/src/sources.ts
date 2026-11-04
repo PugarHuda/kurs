@@ -64,14 +64,24 @@ async function assetDecimals(id: string): Promise<number> {
   return d;
 }
 
-async function substrate(method: string, params: unknown[]): Promise<any> {
-  const r = await getJson(PORTALDOT_RPC, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-  });
-  if (r.error) throw new Error(`${method}: ${r.error.message}`);
-  return r.result;
+/**
+ * One JSON-RPC read on the Portaldot node. A tPOT reading makes ~12 of these, so one
+ * transient node error would make the reporter abstain: reads are retried once.
+ */
+async function substrate(method: string, params: unknown[], retry = 1): Promise<any> {
+  try {
+    const r = await getJson(PORTALDOT_RPC, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    });
+    if (r.error) throw new Error(`${method}: ${r.error.message}`);
+    return r.result;
+  } catch (e) {
+    if (retry <= 0) throw e;
+    await new Promise((res) => setTimeout(res, 500));
+    return substrate(method, params, retry - 1);
+  }
 }
 
 function readU128(le: Buffer, at = 0): bigint {

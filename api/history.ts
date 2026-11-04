@@ -8,7 +8,7 @@
 import { createPublicClient, http, keccak256, parseAbiItem, toBytes, type Address, type Hex } from "viem";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };
-import { FEEDS } from "../reporter/src/feeds.js";
+import { FEEDS, findFeed } from "../reporter/src/feeds.js";
 
 const NETS = {
   portaldot: { d: portaldot, rpc: "https://test-evm-rpc-v3.portaldot.dev", chunk: 100_000n },
@@ -27,22 +27,26 @@ const event = parseAbiItem(
 
 export async function GET(req: Request) {
   const u = new URL(req.url);
-  const net = (u.searchParams.get("net") ?? "portaldot") as keyof typeof NETS;
-  const pair = u.searchParams.get("pair") ?? "USD/IDR";
+  // "network" and "chain" are what the SDK and MCP call it; an unknown value is a 400, not a silent default
+  const q = u.searchParams;
+  const net = (q.get("net") ?? q.get("network") ?? q.get("chain") ?? "portaldot").toLowerCase() as keyof typeof NETS;
+  const feed = findFeed(u.searchParams.get("pair") ?? "USD/IDR");
   const rawLimit = Number(u.searchParams.get("limit") ?? 500);
   if (!Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 5000) return Response.json({ error: "limit must be an integer 1..5000" }, { status: 400 });
   const limit = rawLimit;
   const n = Object.hasOwn(NETS, net) ? NETS[net] : undefined;
-  const feed = FEEDS.find((f) => f.pair === pair);
   if (!n || !feed) return Response.json({ error: "unknown net or pair", nets: Object.keys(NETS), pairs: FEEDS.map((f) => f.pair) }, { status: 400 });
 
+  const pair = feed.pair;
   const c = createPublicClient({ transport: http(n.rpc, { retryCount: 2 }) });
   try {
     const key = `${net}|${pair}`;
     let st = scanned.get(key);
     if (!st) {
-      const deploy = await c.getTransactionReceipt({ hash: n.d.txs.deployOracle as Hex });
-      st = { next: deploy.blockNumber, rounds: [], fromBlock: deploy.blockNumber };
+      // the oracle's deployment block, recorded in deployments/*.json: looking up the deploy
+      // receipt on every cold start failed whenever a load-balanced public node had pruned it
+      const from = "deployBlock" in n.d ? BigInt(n.d.deployBlock as number) : (await c.getTransactionReceipt({ hash: n.d.txs.deployOracle as Hex })).blockNumber;
+      st = { next: from, rounds: [], fromBlock: from };
       scanned.set(key, st);
     }
     const head = await c.getBlockNumber();

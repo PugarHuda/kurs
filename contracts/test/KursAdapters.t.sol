@@ -11,6 +11,8 @@ import {KursBand} from "../src/KursBand.sol";
 import {KursApi3ReaderProxy} from "../src/KursApi3.sol";
 import {KursChronicle} from "../src/KursChronicle.sol";
 import {KursAaveOracle} from "../src/KursAaveOracle.sol";
+import {KursSiloOracle, IQuote} from "../src/KursSiloOracle.sol";
+import {KursTwap} from "../src/KursTwap.sol";
 
 /// Pyth, Morpho, DIA, Band, API3, Chronicle and Aave views over real signed Kurs rounds.
 contract KursAdaptersTest is Test {
@@ -256,5 +258,72 @@ contract KursAdaptersTest is Test {
         vm.warp(block.timestamp + 400); // no timestamp in this interface: stale must revert
         vm.expectRevert();
         aave.getAssetPrice(wbtc);
+    }
+
+    // ------------------------------------------------------- Euler, Silo
+
+    function test_eulerGetQuotesBidEqualsAsk() public {
+        _push(F_BTC, 76_000e8);
+        _push(F_IDR, 18_000e8);
+        assertEq(q.name(), "KursQuoteOracle");
+        (uint256 bid, uint256 ask) = q.getQuotes(1e8, BTC, IDR); // 1 BTC, via USD
+        assertEq(bid, 76_000 * 18_000e18);
+        assertEq(ask, bid);
+        assertEq(bid, q.getQuote(1e8, BTC, IDR));
+        vm.expectRevert(abi.encodeWithSelector(KursQuoteOracle.OracleUnsupportedPair.selector, address(1), USD));
+        q.getQuotes(1, address(1), USD);
+    }
+
+    function test_siloQuote() public {
+        _push(F_IDR, 18_000e8);
+        KursSiloOracle silo = new KursSiloOracle(IQuote(address(q)), IDR);
+        silo.beforeQuote(USD);
+        assertEq(silo.quoteToken(), IDR);
+        assertEq(silo.quote(100e18, USD), 1_800_000e18); // 100 USD in IDR, 18 decimals
+        vm.warp(block.timestamp + 400); // stale: ERC-7412 revert from the oracle
+        vm.expectRevert();
+        silo.quote(1e18, USD);
+    }
+
+    // ------------------------------------------------------------------ TWAP
+
+    function test_twapTimeWeightsRounds() public {
+        KursTwap t = new KursTwap(oracle, "BTC/USD");
+        vm.expectRevert(KursTwap.NoHistory.selector);
+        t.consult(60);
+        _push(F_BTC, 70_000e8);
+        assertTrue(t.poke());
+        assertFalse(t.poke()); // same round: nothing written
+        uint256 t0 = block.timestamp;
+        vm.warp(t0 + 3000);
+        _push(F_BTC, 80_000e8);
+        vm.warp(t0 + 3600);
+        assertTrue(t.poke()); // late poke: the round still counts from its updatedAt (t0+3000)
+        vm.warp(t0 + 4000);
+        // last 1000 s: 0..1000 ago -> 80k since t0+3000 = all 1000 s at 80k
+        assertEq(t.consult(1000), 80_000e8);
+        // last 4000 s: 3000 s at 70k, 1000 s at 80k
+        assertEq(t.consult(4000), 72_500e8);
+        uint32[] memory ago = new uint32[](2);
+        (ago[0], ago[1]) = (4000, 0);
+        int256[] memory c = t.observe(ago);
+        assertEq((c[1] - c[0]) / 4000, 72_500e8);
+        vm.expectRevert(abi.encodeWithSelector(KursTwap.WindowTooLong.selector, uint32(4001), uint64(t0)));
+        t.consult(4001);
+        vm.expectRevert(KursTwap.ZeroWindow.selector);
+        t.consult(0);
+    }
+
+    function test_twapRingWraps() public {
+        KursTwap t = new KursTwap(oracle, "BTC/USD");
+        for (uint256 i; i < 60; ++i) {
+            _push(F_BTC, int192(int256(70_000e8 + i * 1e8)));
+            t.poke();
+            vm.warp(block.timestamp + 100);
+        }
+        assertEq(t.count(), 60);
+        // 48 kept: the oldest is round 12, written 48 * 100 s before the last + 100
+        assertEq(t.oldest(), block.timestamp - 100 - 47 * 100);
+        assertEq(t.consult(100), 70_059e8); // the last 100 s are all the newest price
     }
 }
