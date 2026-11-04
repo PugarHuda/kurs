@@ -1,6 +1,6 @@
 {
   "name": "kurs-oracle",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Read Kurs signed price feeds (Portaldot V3, Sepolia) and pull fresh prices with ERC-7412, on viem. ABIs and live addresses included.",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,7 +14,7 @@
   },
   "peerDependencies": { "viem": "^2.20.0" },
   "devDependencies": { "typescript": "^5.6.0", "viem": "2.57.14" },
-  "keywords": ["oracle", "price-feed", "portaldot", "polkadot", "pallet-revive", "erc-7412", "chainlink", "pyth", "viem"],
+  "keywords": ["oracle", "price-feed", "portaldot", "polkadot", "pallet-revive", "erc-7412", "chainlink", "pyth", "dia", "band", "api3", "chronicle", "aave", "viem"],
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/PugarHuda/kurs.git", "directory": "sdk" },
   "homepage": "https://kurs-ten-zeta.vercel.app",

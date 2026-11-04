@@ -6,8 +6,13 @@ import {KursOracle} from "../src/KursOracle.sol";
 import {KursQuoteOracle} from "../src/KursQuoteOracle.sol";
 import {KursPyth, PythStructs} from "../src/KursPyth.sol";
 import {KursMorphoOracle, IERC7726} from "../src/KursMorphoOracle.sol";
+import {KursDIA} from "../src/KursDIA.sol";
+import {KursBand} from "../src/KursBand.sol";
+import {KursApi3ReaderProxy} from "../src/KursApi3.sol";
+import {KursChronicle} from "../src/KursChronicle.sol";
+import {KursAaveOracle} from "../src/KursAaveOracle.sol";
 
-/// Pyth IPyth and Morpho Blue IOracle views over real signed Kurs rounds.
+/// Pyth, Morpho, DIA, Band, API3, Chronicle and Aave views over real signed Kurs rounds.
 contract KursAdaptersTest is Test {
     KursOracle oracle;
     KursQuoteOracle q;
@@ -155,5 +160,101 @@ contract KursAdaptersTest is Test {
         uint256 loanUnits = (m.price() * 10 ** collDec) / 1e36;
         uint256 expected = uint256(int256(px)) * 10 ** loanDec / 1e8;
         assertApproxEqAbs(loanUnits, expected, 1);
+    }
+    // ------------------------------------------------------------------- DIA
+
+    function test_diaGetValue() public {
+        KursDIA dia = new KursDIA(oracle);
+        (uint128 v, uint128 t) = dia.getValue("BTC/USD");
+        assertEq(v, 0); // feed set, no round: (0, 0) like DIA
+        assertEq(t, 0);
+        _push(F_BTC, 76_000.5e8);
+        (v, t) = dia.getValue("BTC/USD");
+        assertEq(v, 76_000.5e8);
+        assertEq(t, block.timestamp - 5);
+        (v, t) = dia.getValue("XXX/USD");
+        assertEq(v + t, 0);
+    }
+
+    // ------------------------------------------------------------------ Band
+
+    function test_bandCrossRateViaUsd() public {
+        KursBand band = new KursBand(oracle);
+        _push(F_BTC, 76_000e8);
+        _push(F_IDR, 18_144.9e8);
+        KursBand.ReferenceData memory r = band.getReferenceData("BTC", "IDR");
+        assertApproxEqRel(r.rate, 1_379_012_400e18, 1e6); // 76,000 * 18,144.9, rounding of 1/IDR
+        assertEq(r.lastUpdatedBase, block.timestamp - 5);
+        assertEq(r.lastUpdatedQuote, block.timestamp - 5);
+        assertEq(band.getReferenceData("BTC", "USD").rate, 76_000e18);
+        assertEq(band.getReferenceData("USD", "USD").rate, 1e18);
+        string[] memory b = new string[](2);
+        string[] memory q2 = new string[](2);
+        (b[0], q2[0], b[1], q2[1]) = ("BTC", "USD", "USD", "IDR");
+        KursBand.ReferenceData[] memory bulk = band.getReferenceDataBulk(b, q2);
+        assertEq(bulk[0].rate, 76_000e18);
+        assertApproxEqRel(bulk[1].rate, 18_144.9e18, 1e6);
+    }
+
+    function test_bandUnknownReverts() public {
+        KursBand band = new KursBand(oracle);
+        vm.expectRevert(abi.encodeWithSelector(KursBand.RefDataNotAvailable.selector, "XXX"));
+        band.getReferenceData("XXX", "USD");
+        vm.expectRevert(abi.encodeWithSelector(KursBand.RefDataNotAvailable.selector, "BTC")); // no round yet
+        band.getReferenceData("BTC", "USD");
+    }
+
+    // ------------------------------------------------------------------ API3
+
+    function test_api3Read() public {
+        KursApi3ReaderProxy p = new KursApi3ReaderProxy(oracle, F_BTC);
+        vm.expectRevert(KursApi3ReaderProxy.NoData.selector);
+        p.read();
+        _push(F_BTC, 76_000e8);
+        (int224 v, uint32 t) = p.read();
+        assertEq(v, 76_000e18);
+        assertEq(t, block.timestamp - 5);
+    }
+
+    // ------------------------------------------------------------- Chronicle
+
+    function test_chronicleRead() public {
+        KursChronicle c = new KursChronicle(oracle, "BTC/USD");
+        assertEq(c.wat(), bytes32("BTC/USD"));
+        (bool ok,) = c.tryRead();
+        assertFalse(ok);
+        vm.expectRevert(KursChronicle.NoValue.selector);
+        c.read();
+        _push(F_BTC, 76_000e8);
+        assertEq(c.read(), 76_000e18);
+        (uint256 v, uint256 age) = c.readWithAge();
+        assertEq(v, 76_000e18);
+        assertEq(age, block.timestamp - 5);
+        assertEq(c.decimals(), 18);
+    }
+
+    // ------------------------------------------------------------------ Aave
+
+    function test_aavePrices() public {
+        address wbtc = address(0xB7C);
+        address idrx = address(0x1D3);
+        address[] memory a = new address[](2);
+        bytes32[] memory f = new bytes32[](2);
+        bool[] memory inv = new bool[](2);
+        (a[0], f[0], a[1], f[1], inv[1]) = (wbtc, F_BTC, idrx, F_IDR, true);
+        KursAaveOracle aave = new KursAaveOracle(oracle, 300, a, f, inv);
+        _push(F_BTC, 76_000e8);
+        _push(F_IDR, 20_000e8);
+        assertEq(aave.getAssetPrice(wbtc), 76_000e8);
+        assertEq(aave.getAssetPrice(idrx), 5_000); // 1 / 20,000 USD in 1e8 units
+        assertEq(aave.getAssetPrice(address(0)), 1e8);
+        assertEq(aave.getAssetsPrices(a)[0], 76_000e8);
+        assertEq(aave.getSourceOfAsset(wbtc), address(aave));
+        assertEq(aave.getSourceOfAsset(address(0xDEAD)), address(0));
+        vm.expectRevert(abi.encodeWithSelector(KursAaveOracle.UnknownAsset.selector, address(0xDEAD)));
+        aave.getAssetPrice(address(0xDEAD));
+        vm.warp(block.timestamp + 400); // no timestamp in this interface: stale must revert
+        vm.expectRevert();
+        aave.getAssetPrice(wbtc);
     }
 }

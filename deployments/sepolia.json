@@ -57,7 +57,13 @@
     "deploy KursQuoteOracle (ERC-7726)": "0x27b60121415e79862eecc75ddeee7b3d8fe71db7c9fa99284743c64ffe842354",
     "deploy pyth": "0x3cb2e92810d7891c0ae06783a3a23391bd9e750a4545c5bbcba6c0634fe016a1",
     "deploy morphoOracleBtcIdr": "0xd727c81f3b8d94c0c182a0426469f79adabe2b20a85c12431db6e186fd1d9805",
-    "Pyth updatePriceFeeds (BTC/USD, USD/IDR bundles)": "0xdd34b89a8050467bf8a2449eba340553fae033605464bdc0a8a1f8269c364a0e"
+    "Pyth updatePriceFeeds (BTC/USD, USD/IDR bundles)": "0xdd34b89a8050467bf8a2449eba340553fae033605464bdc0a8a1f8269c364a0e",
+    "deploy dia": "0x5958451554d663ea17716c63caa588df83d6d0d797a90819ce499735337537fa",
+    "deploy band": "0x381d67fa5b3b6382f14499dae1e7d80f7c56ab7e85c06cc9f6c351db47254f6b",
+    "deploy api3.BTC/USD": "0x8a0a8d0530ea76bff4a3aa04ed9ee3259e3f96859d89f8c5a47221cafdf195d9",
+    "deploy api3.USD/IDR": "0x45bcc5bdc4a3694c8778331889a228f5a0315f2e049f78b75fe538d8e8b3cc0b",
+    "deploy chronicle.BTC/USD": "0x034ec779a40edfcd46ebd5c188e96fa8cb61c560c6330509724dbc3b5d5e3c3b",
+    "deploy aaveOracle": "0xd18710b8509d4cc07fa95ce49a457986a85b4de8e6f038f71f77cf76d8599b34"
   },
   "deployedAt": "2026-11-02T17:20:23.108Z",
   "converter": "0xa8268109f331dd0b219d424c91c5d3e06c490877",
@@ -87,5 +93,15 @@
     "tPOT/pUSD": "0x258a4423a14a4974fafb754b0eee0ee6decb3f39"
   },
   "pyth": "0x22cd6de783b69a2742a389c037dbe77999fabaa7",
-  "morphoOracleBtcIdr": "0xdcdc450ff50f0925e3b9ca5b83db92e7614026e5"
+  "morphoOracleBtcIdr": "0xdcdc450ff50f0925e3b9ca5b83db92e7614026e5",
+  "dia": "0x77c993404504bc06e415273332fffcd36a8f42ec",
+  "band": "0xd3bc38c7ac048efeaf3d16e88a04810d96878fc0",
+  "api3": {
+    "BTC/USD": "0x4642c5d754195847ae94b5ab7032a16c41ab5cd6",
+    "USD/IDR": "0x32559c5874d123cf5f173bf822ba7a1e83cf07e0"
+  },
+  "chronicle": {
+    "BTC/USD": "0x7135784d38e360c37980fc2cf2840212a07f938e"
+  },
+  "aaveOracle": "0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73"
 }
