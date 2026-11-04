@@ -357,3 +357,15 @@ test("on-chain prices agree with independent references", async ({ request }) =>
   const [k, ref] = [await kurs("USD/IDR"), Number(fx.idr.rate)];
   expect(Math.abs(k - ref) / ref, `USD/IDR: Kurs ${k} vs FloatRates ${ref}`).toBeLessThan(0.01);
 });
+
+test("the board groups feeds by kind: crypto, FX, metals, equities, Portaldot native", async ({ page }) => {
+  await page.goto("/?net=sepolia");
+  await expect(rows(page)).toHaveCount(FEED_COUNT);
+  await expect(page.locator("#board-body tr.group th")).toHaveText(["Crypto", "FX", "Metals", "Equities", "Portaldot native"]);
+  const fx = page.locator("#board-body tr.group:has-text('FX') ~ tr[data-pair]");
+  for (const p of ["EUR / USD", "GBP / USD", "USD / JPY", "USD / CNY", "USD / IDR"]) await expect(rows(page).filter({ hasText: p })).toHaveCount(1);
+  await expect(fx.first()).toBeVisible();
+  const eur = Number(await rows(page).filter({ hasText: "EUR / USD" }).locator("td.led").innerText());
+  expect(eur).toBeGreaterThan(0.5);
+  expect(eur).toBeLessThan(2);
+});

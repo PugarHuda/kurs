@@ -179,6 +179,15 @@ EUR/USD, GBP/USD, USD/JPY, USD/CNY and XAU/USD were added to `feeds.ts` and conf
 
 The existing adapters serve them with no new contract. Read live on Sepolia: Band `getReferenceData("EUR","JPY")` = 178.1516 (EUR/USD x USD/JPY), `("XAU","EUR")` = 3,589.94, `("GBP","CNY")` = 8.9897; DIA `getValue("XAU/USD")` = 4,037.60.
 
+### Chainlink Feed Registry and global ERC-7726 (read live)
+
+Deployed and read by `reporter/scripts/deploy-global.ts`; output in [`docs/global-sepolia.txt`](global-sepolia.txt). Both Sourcify exact.
+
+| Contract | Address | Live read |
+|---|---|---|
+| KursFeedRegistry (Chainlink Feed Registry) | `0x846f4018c3baa2cf97719a0eefd5e1d96d6c0108` | `latestRoundData(EUR, USD)` = 1.1247, `(XAU, USD)` = 4,037.60, `(USD, JPY)` = 158.40; `(USD, EUR)` reverts `FeedNotFound` like Chainlink's |
+| KursQuoteOracle v3 (ERC-7726 + Euler) | `0xacefec3b8ede2378346b2653acd67465cfa33e3d` | 100 EUR = 17,815.16 JPY; 1 oz gold = 3,589.94 EUR; 1 BTC = 12,789,625.80 JPY |
+
 ### ERC-7412 pull from the dashboard's wallet button
 
 The dashboard verified a fresh USD/IDR bundle in the browser, then a wallet (EIP-1193) sent `Multicall3.aggregate3([fulfillOracleQuery(bundle), KursConverter.convert(10000)])`: $100.00 = Rp 1,814,000.00 at round 29896728, read back from the `Converted` event. Driven by `web/e2e/wallet.spec.ts`. Tx [`0x3f73468b…d0b68a`](https://sepolia.etherscan.io/tx/0x3f73468b86a7d9a604744d13e31250d6fa87a459b5f06c28ed98be0574d0b68a).
@@ -286,6 +295,8 @@ Sepolia contracts are verified on Sourcify with an exact match:
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x2f4385f565568b8f835ed8419f02b99bd0754f15/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x4738a3f8931918fc0c56cad53f65e2f4a508fadb/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0xa1f36550f41da000bfa1ac9cdffb32ed08b43abc/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0x846f4018c3baa2cf97719a0eefd5e1d96d6c0108/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0xacefec3b8ede2378346b2653acd67465cfa33e3d/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73/
 
 To check any deployment yourself: `cd contracts && forge build`, then compare `out/KursOracle.sol/KursOracle.json` deployedBytecode with `eth_getCode` at the oracle address (immutables differ only in DOMAIN_SEPARATOR).

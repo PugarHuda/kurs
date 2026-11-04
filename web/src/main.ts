@@ -104,10 +104,25 @@ function sourceLine(f: FeedState) {
   return `${n} source${n > 1 ? "s" : ""}`;
 }
 
+/** Board section of a feed, read from where its price comes from. */
+function groupOf(f: FeedState["feed"]) {
+  if (f.sources["portaldot-assetconversion"]) return "Portaldot native";
+  if (f.sources.nasdaq) return "Equities";
+  if (f.sources["gold-api"]) return "Metals";
+  if (f.sources.frankfurter) return "FX";
+  return "Crypto";
+}
+
 function renderBoard(s: Snapshot) {
-  $("#board-body").innerHTML = s.feeds.map((f) => boardRow(s, f)).join("");
+  const groups = ["Crypto", "FX", "Metals", "Equities", "Portaldot native"];
+  $("#board-body").innerHTML = groups
+    .map((g) => {
+      const fs = s.feeds.filter((f) => groupOf(f.feed) === g);
+      return fs.length ? `<tr class="group"><th colspan="5" scope="colgroup">${g}</th></tr>${fs.map((f) => boardRow(s, f)).join("")}` : "";
+    })
+    .join("");
   $("#board-meta").textContent = `${NETWORKS[s.deployment.chain].label}, block ${s.block.toLocaleString("en-US")}, quorum ${s.quorum} of ${s.reporters.length}`;
-  for (const tr of document.querySelectorAll<HTMLTableRowElement>("#board-body tr")) {
+  for (const tr of document.querySelectorAll<HTMLTableRowElement>("#board-body tr[data-pair]")) {
     const pick = () => {
       selected = tr.dataset.pair!;
       history.replaceState(null, "", `?net=${s.deployment.chain}&feed=${encodeURIComponent(selected)}`);

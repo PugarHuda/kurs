@@ -723,3 +723,12 @@ table.sigs td:first-child {
     height: 720px;
   }
 }
+
+#board-body tr.group th {
+  text-align: left;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9fb0c6; /* same as the board's column headers: passes AA on --board */
+  padding: 0.9rem 0.75rem 0.3rem;
+}

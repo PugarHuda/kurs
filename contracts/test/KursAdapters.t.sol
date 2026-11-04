@@ -14,6 +14,8 @@ import {KursAaveOracle} from "../src/KursAaveOracle.sol";
 import {KursSiloOracle, IQuote} from "../src/KursSiloOracle.sol";
 import {KursTwap} from "../src/KursTwap.sol";
 import {KursTwapKeeper} from "../src/KursTwapKeeper.sol";
+import {KursFeedRegistry} from "../src/KursFeedRegistry.sol";
+import {KursAggregatorFactory} from "../src/KursAggregatorV3.sol";
 
 /// Pyth, Morpho, DIA, Band, API3, Chronicle and Aave views over real signed Kurs rounds.
 contract KursAdaptersTest is Test {
@@ -371,5 +373,68 @@ contract KursAdaptersTest is Test {
         int192 avg = t.consult(window);
         assertGe(avg, lo);
         assertLe(avg, hi);
+    }
+
+    // ----------------------------------------------- global FX: Feed Registry, ERC-7726
+
+    address constant EUR = address(978);
+    address constant JPY = address(392);
+    address constant XAU = address(959);
+    bytes32 constant F_EUR = keccak256("EUR/USD");
+    bytes32 constant F_JPY = keccak256("USD/JPY");
+    bytes32 constant F_XAU = keccak256("XAU/USD");
+
+    function _fx() internal {
+        oracle.setFeed(F_EUR, "EUR / USD", 8, 3600, 100, 0.5e8, 2e8);
+        oracle.setFeed(F_JPY, "USD / JPY", 8, 3600, 100, 50e8, 500e8);
+        oracle.setFeed(F_XAU, "XAU / USD", 8, 3600, 150, 500e8, 20_000e8);
+        _push(F_EUR, 1.125e8);
+        _push(F_JPY, 158e8);
+        _push(F_XAU, 4_000e8);
+    }
+
+    function test_feedRegistryChainlinkDenominations() public {
+        _fx();
+        KursAggregatorFactory f = new KursAggregatorFactory(oracle);
+        f.deploy(F_EUR);
+        f.deploy(F_XAU);
+        address[] memory b = new address[](2);
+        address[] memory qt = new address[](2);
+        bytes32[] memory ids = new bytes32[](2);
+        (b[0], qt[0], ids[0]) = (EUR, USD, F_EUR);
+        (b[1], qt[1], ids[1]) = (XAU, USD, F_XAU);
+        KursFeedRegistry reg = new KursFeedRegistry(f, b, qt, ids);
+        (, int256 eur,,,) = reg.latestRoundData(EUR, USD);
+        assertEq(eur, 1.125e8);
+        assertEq(reg.latestAnswer(XAU, USD), 4_000e8);
+        assertEq(reg.decimals(EUR, USD), 8);
+        assertEq(reg.description(XAU, USD), "XAU / USD");
+        assertEq(address(reg.getFeed(EUR, USD)), f.aggregatorOf(F_EUR)); // the same AggregatorV3 clone
+        (uint80 rid,,,,) = reg.latestRoundData(EUR, USD);
+        (, int256 again,,,) = reg.getRoundData(EUR, USD, rid);
+        assertEq(again, eur);
+        assertEq(reg.latestRound(EUR, USD), rid);
+        // Chainlink's registry serves only the feed's own direction
+        vm.expectRevert(abi.encodeWithSelector(KursFeedRegistry.FeedNotFound.selector, USD, EUR));
+        reg.latestRoundData(USD, EUR);
+        // a pair in the table whose clone is not deployed yet is also not found
+        vm.expectRevert(abi.encodeWithSelector(KursFeedRegistry.FeedNotFound.selector, JPY, USD));
+        reg.latestRoundData(JPY, USD);
+    }
+
+    function test_erc7726GlobalCrossRates() public {
+        _fx();
+        address[] memory b = new address[](3);
+        address[] memory qt = new address[](3);
+        bytes32[] memory f = new bytes32[](3);
+        uint8[] memory bd = new uint8[](3);
+        uint8[] memory qd = new uint8[](3);
+        (b[0], qt[0], f[0], bd[0], qd[0]) = (EUR, USD, F_EUR, 18, 18);
+        (b[1], qt[1], f[1], bd[1], qd[1]) = (USD, JPY, F_JPY, 18, 18);
+        (b[2], qt[2], f[2], bd[2], qd[2]) = (XAU, USD, F_XAU, 18, 18);
+        KursQuoteOracle g = new KursQuoteOracle(oracle, 300, b, qt, f, bd, qd);
+        assertEq(g.getQuote(100e18, EUR, JPY), 17_775e18); // 100 EUR -> USD 112.5 -> JPY 17,775
+        assertEq(g.getQuote(1e18, XAU, EUR), uint256(4_000e18 * 1e18) / 1.125e18); // gold in euros, rounded down
+        assertEq(g.getQuote(17_775e18, JPY, EUR), 100e18);
     }
 }

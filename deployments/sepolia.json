@@ -69,7 +69,7 @@
     "deploy api3.USD/IDR": "0x45bcc5bdc4a3694c8778331889a228f5a0315f2e049f78b75fe538d8e8b3cc0b",
     "deploy chronicle.BTC/USD": "0x034ec779a40edfcd46ebd5c188e96fa8cb61c560c6330509724dbc3b5d5e3c3b",
     "deploy aaveOracle": "0xd18710b8509d4cc07fa95ce49a457986a85b4de8e6f038f71f77cf76d8599b34",
-    "deploy quoteOracle": "0xa8081ac9213c8a0981a11f171b4f7307c695eeab9d64c7b13712a09470aa8fa3",
+    "deploy quoteOracle": "0xe442e97a2f57003f59af8284d87ddc1478a9e9f5f02a1e5c554963ad55d29201",
     "deploy siloOracle": "0x6c7fe6367bb88f49679461f7b5ea2034a2dbceb9d870180ad01c119cb94d1a3b",
     "deploy twap.BTC/USD": "0xd54509efed305bb01737cc8af0f972d8333d4a1352ecb48a0b5da09126ae279b",
     "deploy twap.USD/IDR": "0x5c63e336db1287545653c8210fdcfabb7c7c817a747a70f50192039b7cbc5f4e",
@@ -81,7 +81,8 @@
     "aggregator GBP/USD": "0xa9bd0281adbf900434925904906fe8a280e3b8908e20b6c6c9a01abc0c0b45a1",
     "aggregator USD/JPY": "0xdd37ed136da5d387bea788654efbbafd5fe9550f6430830627904fb25689f18a",
     "aggregator USD/CNY": "0xf671a53e1d2f77226d8cfd8b5f6d1078233cef14ee693854b9d6a4d1207c9e60",
-    "aggregator XAU/USD": "0xed905837e3ebf035419105179de658f994d61484ca5bf7afeeaec607ebd9c934"
+    "aggregator XAU/USD": "0xed905837e3ebf035419105179de658f994d61484ca5bf7afeeaec607ebd9c934",
+    "deploy feedRegistry": "0xe7347dc94023405f6ea1e70322b540e8a83197a0fdd00ffe177fd48152ec13dc"
   },
   "deployedAt": "2026-11-02T17:20:23.108Z",
   "converter": "0xa8268109f331dd0b219d424c91c5d3e06c490877",
@@ -122,12 +123,14 @@
   },
   "aaveOracle": "0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73",
   "quoteOracleV1": "0x787e4f515d1affa6a3dff10ee953f236db90cf30",
-  "quoteOracle": "0xc1764dea11e988cecdb5b7c92811fbbfe3550316",
   "siloOracle": "0xd43c69cb8b474772eeb4b8132a54fc44044992c3",
   "deployBlock": 12049595,
   "twap": {
     "BTC/USD": "0x2f4385f565568b8f835ed8419f02b99bd0754f15",
     "USD/IDR": "0x4738a3f8931918fc0c56cad53f65e2f4a508fadb"
   },
-  "twapKeeper": "0xa1f36550f41da000bfa1ac9cdffb32ed08b43abc"
+  "twapKeeper": "0xa1f36550f41da000bfa1ac9cdffb32ed08b43abc",
+  "feedRegistry": "0x846f4018c3baa2cf97719a0eefd5e1d96d6c0108",
+  "quoteOracleV2": "0xc1764dea11e988cecdb5b7c92811fbbfe3550316",
+  "quoteOracle": "0xacefec3b8ede2378346b2653acd67465cfa33e3d"
 }
