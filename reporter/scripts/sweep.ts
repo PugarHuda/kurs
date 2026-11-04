@@ -1,5 +1,5 @@
-// Forwards tPOT held by the reporter keys and the multisig signers to the deployer, which
-// pays the relay's gas. Reporters are EVM keys (EVM transfer, gas reserved); signers are
+// Forwards tPOT held by the reporter and Safe-signer keys and the multisig signers to the deployer, which
+// pays the relay's gas. Reporters and Safe signers are EVM keys (EVM transfer, gas reserved); signers are
 // sr25519 (balances.transferAll keep-alive, so the account and its existential deposit stay).
 //   npx tsx scripts/sweep.ts
 import { ApiPromise, Keyring, WsProvider } from "@polkadot/api";
@@ -15,8 +15,8 @@ const pub = createPublicClient({ transport: http(RPC) });
 const chain = { id: await pub.getChainId(), name: "portaldot", nativeCurrency: { name: "tPOT", symbol: "tPOT", decimals: 18 }, rpcUrls: { default: { http: [RPC] } } } as const;
 const before = await pub.getBalance({ address: deployer.address });
 
-for (const k of [1, 2, 3, 4, 5]) {
-  const acct = privateKeyToAccount(process.env[`REPORTER_${k}_PK`] as Hex);
+for (const k of ["REPORTER_1_PK", "REPORTER_2_PK", "REPORTER_3_PK", "REPORTER_4_PK", "REPORTER_5_PK", "SAFE_SIGNER_1_PK", "SAFE_SIGNER_2_PK", "SAFE_SIGNER_3_PK"]) {
+  const acct = privateKeyToAccount(process.env[k] as Hex);
   const bal = await pub.getBalance({ address: acct.address });
   if (bal < parseEther("1")) continue;
   const wallet = createWalletClient({ account: acct, chain, transport: http(RPC) });
@@ -25,7 +25,7 @@ for (const k of [1, 2, 3, 4, 5]) {
   const value = bal - gas * gasPrice * 3n - parseEther("0.1"); // ponytail: fee margin + dust left behind
   const hash = await wallet.sendTransaction({ to: deployer.address, value, gas: gas * 2n, gasPrice });
   await pub.waitForTransactionReceipt({ hash });
-  console.log(`reporter ${k}: sent ${formatEther(value)} tx ${hash}`);
+  console.log(`${k}: sent ${formatEther(value)} tx ${hash}`);
 }
 
 await cryptoWaitReady();

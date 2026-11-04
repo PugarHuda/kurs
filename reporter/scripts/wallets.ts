@@ -12,7 +12,7 @@ const pub = createPublicClient({ transport: http("https://test-evm-rpc-v3.portal
 const evmNative = (h160: string) => encodeAddress(new Uint8Array([...Buffer.from(h160.slice(2), "hex"), ...Array(12).fill(0xee)]), 42);
 
 const rows: [string, string, string][] = [];
-for (const k of ["DEPLOYER_PK", "REPORTER_1_PK", "REPORTER_2_PK", "REPORTER_3_PK", "REPORTER_4_PK", "REPORTER_5_PK"]) {
+for (const k of ["DEPLOYER_PK", "REPORTER_1_PK", "REPORTER_2_PK", "REPORTER_3_PK", "REPORTER_4_PK", "REPORTER_5_PK", "SAFE_SIGNER_1_PK", "SAFE_SIGNER_2_PK", "SAFE_SIGNER_3_PK"]) {
   const a = privateKeyToAccount(process.env[k] as Hex);
   rows.push([k, evmNative(a.address), formatEther(await pub.getBalance({ address: a.address }))]);
 }
