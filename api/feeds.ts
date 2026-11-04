@@ -20,6 +20,8 @@ export function GET() {
       aggregators: Object.fromEntries(deployments.map((d) => [d.chain, (d.aggregators as Record<string, string>)[f.pair] ?? null])),
     })),
     networks: deployments.map((d) => ({ chain: d.chain, chainId: d.chainId, oracle: d.oracle, reporters: d.reporters, quorum: d.quorum })),
+    // the git commit this deployment was built from (Vercel system env), so CI can wait for it
+    commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
   };
   return new Response(JSON.stringify(body), {
     headers: { "content-type": "application/json", "access-control-allow-origin": "*", "cache-control": "public, max-age=60" },

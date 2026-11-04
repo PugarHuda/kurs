@@ -2,6 +2,9 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 const FEED_COUNT = 11;
+// API tests call the deployed functions directly: the Vite preview proxy answers OPTIONS
+// itself and is a second hop that can fail on its own
+const API = process.env.KURS_BASE_URL ?? "https://kurs-ten-zeta.vercel.app";
 const rows = (page: Page) => page.locator("#board-body tr[data-pair]");
 
 test.beforeEach(async ({ page }) => {
@@ -140,7 +143,7 @@ test("layout shift while the board loads stays under 0.1", async ({ page }) => {
 });
 
 test("/api/substrate reads every feed through ReviveApi_call and agrees with the board", async ({ request }) => {
-  const r = await request.get("/api/substrate", { timeout: 60_000 });
+  const r = await request.get(API + "/api/substrate", { timeout: 60_000 });
   expect(r.ok()).toBeTruthy();
   const body = await r.json();
   expect(body.via).toContain("ReviveApi_call");
@@ -151,7 +154,7 @@ test("/api/substrate reads every feed through ReviveApi_call and agrees with the
 
 test("/api/mcp is an MCP server whose tools return on-chain prices", async ({ request }) => {
   const rpc = async (method: string, params: object = {}) => {
-    const r = await request.post("/api/mcp", {
+    const r = await request.post(API + "/api/mcp", {
       headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2025-06-18" },
       data: { jsonrpc: "2.0", id: 1, method, params },
       timeout: 90_000,
@@ -189,14 +192,14 @@ test("/api/mcp is an MCP server whose tools return on-chain prices", async ({ re
 });
 
 test("pair names are case-insensitive and network aliases are honoured; unknown ones are a 400", async ({ request }) => {
-  const b = await request.get("/api/bundle?pair=usd-idr", { timeout: 60_000 });
+  const b = await request.get(API + "/api/bundle?pair=usd-idr", { timeout: 60_000 });
   expect(b.status()).toBe(200);
   expect((await b.json()).pair).toBe("USD/IDR");
-  const h = await request.get("/api/history?network=sepolia&pair=btc_usd&limit=1", { timeout: 90_000 });
+  const h = await request.get(API + "/api/history?network=sepolia&pair=btc_usd&limit=1", { timeout: 90_000 });
   expect(h.status()).toBe(200);
   expect(await h.json()).toMatchObject({ net: "sepolia", pair: "BTC/USD" });
-  expect((await request.get("/api/history?chain=evil&pair=BTC/USD")).status()).toBe(400);
-  expect((await request.get("/api/bundle?pair=BTC/EUR")).status()).toBe(400);
+  expect((await request.get(API + "/api/history?chain=evil&pair=BTC/USD")).status()).toBe(400);
+  expect((await request.get(API + "/api/bundle?pair=BTC/EUR")).status()).toBe(400);
 });
 
 test("the dashboard is in English (no Indonesian UI copy)", async ({ page }) => {
@@ -206,7 +209,7 @@ test("the dashboard is in English (no Indonesian UI copy)", async ({ page }) => 
 });
 
 test("full round history comes from RoundUpdated logs via /api/history", async ({ page, request }) => {
-  const r = await request.get("/api/history?net=sepolia&pair=USD/IDR&limit=3", { timeout: 90_000 });
+  const r = await request.get(API + "/api/history?net=sepolia&pair=USD/IDR&limit=3", { timeout: 90_000 });
   expect(r.ok()).toBeTruthy();
   const b = await r.json();
   expect(b.total).toBeGreaterThan(0);
@@ -233,7 +236,7 @@ function check(spec: { components: { schemas: Record<string, Schema> } }, s: Sch
 }
 
 test("every API response matches openapi.json", async ({ request }) => {
-  const spec = await (await request.get("/openapi.json")).json();
+  const spec = await (await request.get(API + "/openapi.json")).json();
   const calls: [string, string, string][] = [
     ["/api/feeds", "FeedList", "200"],
     ["/api/bundle?pair=USD/IDR", "Bundle", "200"],
@@ -244,7 +247,7 @@ test("every API response matches openapi.json", async ({ request }) => {
   ];
   const errs: string[] = [];
   for (const [url, schema, want] of calls) {
-    const r = await request.get(url, { timeout: 90_000 });
+    const r = await request.get(API + url, { timeout: 90_000 });
     if (want === "200" && r.status() !== 200) errs.push(`${url}: HTTP ${r.status()}`);
     check(spec, { $ref: `#/components/schemas/${schema}` }, await r.json(), url, errs);
   }
@@ -252,7 +255,7 @@ test("every API response matches openapi.json", async ({ request }) => {
 });
 
 test("/api/metrics is valid Prometheus text with a sample per feed and chain", async ({ request }) => {
-  const r = await request.get("/api/metrics", { timeout: 90_000 });
+  const r = await request.get(API + "/api/metrics", { timeout: 90_000 });
   expect(r.status()).toBe(200);
   expect(r.headers()["content-type"]).toContain("text/plain");
   const lines = (await r.text()).trim().split("\n");
@@ -268,19 +271,19 @@ test("/api/metrics is valid Prometheus text with a sample per feed and chain", a
 });
 
 test("/api/x402 answers 402 with x402 v1 requirements, and rejects a forged payment", async ({ request }) => {
-  const r = await request.get("/api/x402?pair=USD/IDR");
+  const r = await request.get(API + "/api/x402?pair=USD/IDR");
   expect(r.status()).toBe(402);
   const body = await r.json();
   expect(body.x402Version).toBe(1);
   expect(body.accepts[0]).toMatchObject({ scheme: "exact", network: "base-sepolia", maxAmountRequired: "1000" });
   const forged = Buffer.from(JSON.stringify({ x402Version: 1, scheme: "exact", network: "base-sepolia", payload: { signature: "0x" + "11".repeat(65), authorization: { from: body.accepts[0].payTo, to: body.accepts[0].payTo, value: "1000", validAfter: "0", validBefore: "9999999999", nonce: "0x" + "00".repeat(32) } } })).toString("base64");
-  const r2 = await request.get("/api/x402?pair=USD/IDR", { headers: { "X-PAYMENT": forged }, timeout: 60_000 });
+  const r2 = await request.get(API + "/api/x402?pair=USD/IDR", { headers: { "X-PAYMENT": forged }, timeout: 60_000 });
   expect(r2.status()).toBe(402); // the facilitator refuses it: no bundle without a real payment
 });
 
 test("/api/quote converts with on-chain prices, shows each round's age, and refuses what it cannot answer honestly", async ({ request }) => {
   const q = async (qs: string) => {
-    const r = await request.get(`/api/quote?${qs}`, { timeout: 60_000 });
+    const r = await request.get(`${API}/api/quote?${qs}`, { timeout: 60_000 });
     return { status: r.status(), body: await r.json() };
   };
   const usd = await q("amount=100&from=usd&to=idr&network=sepolia");
@@ -299,7 +302,7 @@ test("/api/quote converts with on-chain prices, shows each round's age, and refu
 
 test("browsers can preflight the API: OPTIONS answers CORS, including X-PAYMENT for x402", async ({ request }) => {
   for (const path of ["/api/x402?pair=USD/IDR", "/api/bundle?pair=USD/IDR", "/api/quote", "/api/history", "/api/feeds"]) {
-    const r = await request.fetch(path, { method: "OPTIONS", headers: { origin: "https://dapp.example", "access-control-request-method": "GET", "access-control-request-headers": "x-payment" } });
+    const r = await request.fetch(API + path, { method: "OPTIONS", headers: { origin: "https://dapp.example", "access-control-request-method": "GET", "access-control-request-headers": "x-payment" } });
     expect(r.status(), path).toBe(204);
     expect(r.headers()["access-control-allow-origin"]).toBe("*");
     expect(r.headers()["access-control-allow-headers"]).toContain("x-payment");
