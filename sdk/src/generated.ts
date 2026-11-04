@@ -29,7 +29,8 @@ export const deployments = {
       "META/USD": "0x441DE8AdAC0eF247AbfF0416e4caAcc4Bf04c1A8",
       "tPOT/pUSD": "0xF621D429622655AA36f7226AD4D4B497C23500DD"
     },
-    "converter": "0xbfc639efc469056d9d4dcd8d4215060bae1fd676"
+    "converter": "0xbfc639efc469056d9d4dcd8d4215060bae1fd676",
+    "dia": "0x969b85f2c66b8504bb4f33e16333e7328187dfd9"
   },
   "sepolia": {
     "chainId": 11155111,
@@ -64,6 +65,16 @@ export const deployments = {
       "AMZN/USD": "0x23cfb56fbfc5ebdf4e538c2ff6fbbf143de0eae4",
       "META/USD": "0x78ec9fda671c924e48130eaeef2763679208bd82",
       "tPOT/pUSD": "0x258a4423a14a4974fafb754b0eee0ee6decb3f39"
-    }
+    },
+    "dia": "0x77c993404504bc06e415273332fffcd36a8f42ec",
+    "band": "0xd3bc38c7ac048efeaf3d16e88a04810d96878fc0",
+    "api3": {
+      "BTC/USD": "0x4642c5d754195847ae94b5ab7032a16c41ab5cd6",
+      "USD/IDR": "0x32559c5874d123cf5f173bf822ba7a1e83cf07e0"
+    },
+    "chronicle": {
+      "BTC/USD": "0x7135784d38e360c37980fc2cf2840212a07f938e"
+    },
+    "aaveOracle": "0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73"
   }
 } as const;

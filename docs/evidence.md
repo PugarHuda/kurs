@@ -8,6 +8,7 @@ Every link opens a public explorer.
 | Contract | Address |
 |---|---|
 | KursOracle | `0x5bdd9713ddc4f11e14bd3094882401cd122656f4` |
+| KursDIA (DIA `getValue`, live 2026-11-04; reads in [`dia-portaldot.txt`](dia-portaldot.txt)) | `0x969b85f2c66b8504bb4f33e16333e7328187dfd9` (deploy tx `0xebe1b0494dc903215ea4454582631c6839bdbb798d4d9b00e8b1b841fb754af4`) |
 | KursAggregatorFactory | `0xd8ec774514bd01e2fd0d81845d9e56b31cd3915b` |
 | KursConverter (ERC-7412 pull consumer, USD/IDR) | `0xbfc639efc469056d9d4dcd8d4215060bae1fd676` |
 

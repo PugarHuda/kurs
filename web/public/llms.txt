@@ -18,7 +18,7 @@ Feeds: BTC/USD, ETH/USD, DOT/USD, USDT/USD, USD/IDR, TSLA/USD, NVDA/USD, AAPL/US
 
 ## Contracts
 
-- Portaldot V3 testnet (chain id 420420777, RPC https://test-evm-rpc-v3.portaldot.dev): KursOracle 0x5bdd9713ddc4f11e14bd3094882401cd122656f4
+- Portaldot V3 testnet (chain id 420420777, RPC https://test-evm-rpc-v3.portaldot.dev): KursOracle 0x5bdd9713ddc4f11e14bd3094882401cd122656f4, KursDIA (DIA getValue) 0x969b85f2c66b8504bb4f33e16333e7328187dfd9
 - Sepolia: KursOracle 0xd3f6bf8e595e815de11598f23170b37341a2cbc3, KursQuoteOracle (ERC-7726) 0x787e4f515d1affa6a3dff10ee953f236db90cf30, KursPyth (IPyth) 0x22cd6de783b69a2742a389c037dbe77999fabaa7, KursMorphoOracle (BTC/IDR) 0xdcdc450ff50f0925e3b9ca5b83db92e7614026e5, KursDIA 0x77c993404504bc06e415273332fffcd36a8f42ec, KursBand 0xd3bc38c7ac048efeaf3d16e88a04810d96878fc0, KursApi3ReaderProxy BTC/USD 0x4642c5d754195847ae94b5ab7032a16c41ab5cd6 and USD/IDR 0x32559c5874d123cf5f173bf822ba7a1e83cf07e0, KursChronicle BTC/USD 0x7135784d38e360c37980fc2cf2840212a07f938e, KursAaveOracle 0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73
 
 ## Docs

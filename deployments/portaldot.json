@@ -54,7 +54,8 @@
     "transferOwnership(multisig H160)": "0xbcc817dbd124fe88e6ea6cca567a89fb8881ecc95810be1c0f3351bd162d0670",
     "fund signer A (EVM value transfer to mapped H160)": "0x5469afe29977a76e89ca178eec9ea8d8ea677d0c1a5e9052e2d54f75e9b88cfb",
     "erc7412 pull 1/2: fulfillOracleQuery (no Multicall3 on Portaldot)": "0x1220a94327565743760bd238a0929e1014e91ed77dff605526de8a1fa84429f6",
-    "erc7412 pull 2/2: KursConverter.convert(10000)": "0x2a0fe924826fc78c8471bc9ed99afa295b86a761b20feb793cf9d435851bedcf"
+    "erc7412 pull 2/2: KursConverter.convert(10000)": "0x2a0fe924826fc78c8471bc9ed99afa295b86a761b20feb793cf9d435851bedcf",
+    "deploy dia": "0xebe1b0494dc903215ea4454582631c6839bdbb798d4d9b00e8b1b841fb754af4"
   },
   "deployedAt": "2026-11-03T01:38:01.102Z",
   "converter": "0xbfc639efc469056d9d4dcd8d4215060bae1fd676",
@@ -145,5 +146,6 @@
       },
       "executedAt": 303543
     }
-  }
+  },
+  "dia": "0x969b85f2c66b8504bb4f33e16333e7328187dfd9"
 }
