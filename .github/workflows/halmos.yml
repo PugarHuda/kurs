@@ -15,8 +15,14 @@ concurrency:
 
 jobs:
   prove:
+    # one job per proof: a slow proof cannot hide the others' results
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [sort3, sort4, sort5, medianBounded3, medianBounded4, medianBounded5, minority3, minority4, minority5]
+    name: prove ${{ matrix.check }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: foundry-rs/foundry-toolchain@v1
@@ -26,5 +32,5 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install halmos==0.3.3
-      - run: halmos --match-contract KursHalmos --loop 6 --solver-timeout-assertion 0
+      - run: halmos --match-contract KursHalmos --function check_${{ matrix.check }} --loop 6 --solver-timeout-assertion 0
         working-directory: contracts

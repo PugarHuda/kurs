@@ -45,13 +45,17 @@ contract KursHalmos is Test {
     /// The median lies between the smallest and the largest observation.
     function _checkBounded(int192[] memory input) internal view {
         (, int192 m) = h.sortAndMedian(_copy(input));
-        int192 lo = input[0];
-        int192 hi = input[0];
-        for (uint256 i = 1; i < input.length; ++i) {
-            if (input[i] < lo) lo = input[i];
-            if (input[i] > hi) hi = input[i];
+        // ponytail: "m >= some input and m <= some input" == bounded, without min/max branches
+        bool geSome;
+        bool leSome;
+        for (uint256 i; i < input.length; ++i) {
+            int192 v = input[i];
+            assembly {
+                geSome := or(geSome, iszero(slt(m, v)))
+                leSome := or(leSome, iszero(sgt(m, v)))
+            }
         }
-        assert(lo <= m && m <= hi);
+        assert(geSome && leSome);
     }
 
     /// The oracle's core claim: if a strict majority of the bundle is honest and their
@@ -108,6 +112,12 @@ contract KursHalmos is Test {
     }
 
     function _count(int192[] memory a, int192 v) internal pure returns (uint256 n) {
-        for (uint256 i; i < a.length; ++i) if (a[i] == v) ++n;
+        // branch-free so Halmos does not fork 2^n paths per call
+        for (uint256 i; i < a.length; ++i) {
+            int192 x = a[i];
+            assembly {
+                n := add(n, eq(x, v))
+            }
+        }
     }
 }

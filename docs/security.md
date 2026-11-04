@@ -53,5 +53,10 @@ bundles of 3, 4 and 5 observations (the deployed set is 5 reporters, quorum 3):
 - `check_minorityN`: if a strict majority of observations lie in `[lo, hi]`, the median does
   too, whatever the minority signed (2 of 3, 3 of 4, 3 of 5 honest)
 
-`check_minority3` passed locally (15 paths, 58 s). The full set runs in CI
-(`.github/workflows/halmos.yml`, `halmos --loop 6`); its result is the authoritative one.
+Local results (halmos 0.3.3, `--loop 6`): `check_sort3` (14 paths, 0.4 s), `check_sort4`
+(88, 1.9 s), `check_sort5` (260, 7.9 s), `check_medianBounded3` (9, 0.1 s),
+`check_medianBounded4` (104, 9.5 s), `check_minority3` (15, 51 s), `check_minority4`
+(102, 18 s): all PASS. `check_medianBounded5` and `check_minority5` are run by CI only
+(`.github/workflows/halmos.yml`, one job per proof, 60 min cap each); their status is the
+one shown there. An earlier single-job run timed out at 2 h without a result: the test's
+own helpers branched per element. They are now branch-free (assembly `eq`/`slt`).
