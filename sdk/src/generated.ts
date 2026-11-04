@@ -78,6 +78,10 @@ export const deployments = {
       "BTC/USD": "0x7135784d38e360c37980fc2cf2840212a07f938e"
     },
     "aaveOracle": "0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73",
-    "siloOracle": "0xd43c69cb8b474772eeb4b8132a54fc44044992c3"
+    "siloOracle": "0xd43c69cb8b474772eeb4b8132a54fc44044992c3",
+    "twap": {
+      "BTC/USD": "0x2f4385f565568b8f835ed8419f02b99bd0754f15",
+      "USD/IDR": "0x4738a3f8931918fc0c56cad53f65e2f4a508fadb"
+    }
   }
 } as const;

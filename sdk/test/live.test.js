@@ -56,3 +56,12 @@ test("getTwap reads the KursTwap time-weighted average on Sepolia", async () => 
   assert.ok(t.price > 10_000 && t.price < 30_000, `twap ${t.price}`);
   await assert.rejects(getTwap(sepolia, "USD/IDR", 30 * 24 * 3600)); // beyond its history
 });
+
+test("the packaged addresses match deployments/*.json (run scripts/gen-abi.mjs after a deploy)", async () => {
+  const { readFileSync } = await import("node:fs");
+  for (const net of ["portaldot", "sepolia"]) {
+    const d = JSON.parse(readFileSync(new URL(`../../deployments/${net}.json`, import.meta.url), "utf8"));
+    for (const [k, v] of Object.entries(networks[net])) if (k !== "chain") assert.deepEqual(v, d[k], `${net}.${k}`);
+    for (const k of ["oracle", "quoteOracle", "siloOracle", "twap", "dia", "pyth"]) if (d[k]) assert.deepEqual(networks[net][k], d[k], `${net}.${k} missing from the SDK`);
+  }
+});
