@@ -1,6 +1,8 @@
-KursOracle (Solidity via resolc) 0x2d87284035969656d538b3ccb6ef4654fe579d1c
-round on oracle [ 29894565n, 1815270000000n, 1793673952n, 1793673957n ] tx 0x37882fa5cb802e7ede3594688cd4477036eaae270d39ac27b71750b0e7ecce96
-KursRemit (ink! v6) 0x06db37b57bb04cf1130e80daa42825ccb986e7ae
-ink! latest() -> { roundId: 29894565n, answer: 1815270000000n }
-quote_and_log tx 0x2771f8236f779ecd669669201ca61602b4ff2a33bc7da821a77de952ece15607 ContractEmitted: yes
-OK: ink! read round 29894565 = 18152.7 IDR per USD from the Solidity oracle
+(map) mapAccount: revive.AccountAlreadyMapped
+KursOracle (Solidity via resolc) 0xa44639cd0d0e6c6607491088c9c549e184456122
+round on oracle [ 29895989n, 1815270000000n, 1793759361n, 1793759366n ] tx 0xf326350facf2ff75e20c53ab3fd4a8926d98a036d795cd75c271f2e0ce084f1a
+KursRemit (ink! v6) 0x907cb8d4ab3e4c38829627d2be6c92cf6c54eb19
+ink! latest() -> { roundId: 29895989n, answer: 1815270000000n }
+quote_and_log tx 0xffaca1539790613715595261d41921503a3b52dd867bc8f58d89b7e995d8b8fb ContractEmitted: yes
+
+OK: ink! read round 29895989 = 18152.7 IDR per USD from the Solidity oracle
