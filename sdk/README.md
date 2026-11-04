@@ -16,7 +16,7 @@ const client = createPublicClient({ chain: networks.portaldot.chain, transport: 
 const { price, roundId, updatedAt } = await getPrice(client, "USD/IDR"); // network inferred from the chain id
 ```
 
-Feeds: BTC/USD, ETH/USD, DOT/USD, USDT/USD, USD/IDR, TSLA/USD, NVDA/USD, AAPL/USD, AMZN/USD, META/USD, tPOT/pUSD (`PAIRS`). `feedId(pair)` is `keccak256(pair)`.
+Feeds: BTC/USD, ETH/USD, DOT/USD, USDT/USD, EUR/USD, GBP/USD, USD/JPY, USD/CNY, USD/IDR, XAU/USD (gold), TSLA/USD, NVDA/USD, AAPL/USD, AMZN/USD, META/USD, tPOT/pUSD (`PAIRS`). `feedId(pair)` is `keccak256(pair)`.
 
 ## Pull a fresh price (ERC-7412)
 

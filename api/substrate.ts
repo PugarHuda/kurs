@@ -18,6 +18,7 @@ export async function GET() {
       oracle: portaldot.oracle,
       block: r.block,
       blockHash: r.blockHash,
+      notConfigured: r.skipped,
       feeds: r.reads.map((x) => ({
         pair: x.pair,
         roundId: x.roundId.toString(),

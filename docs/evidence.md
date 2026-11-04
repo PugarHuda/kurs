@@ -166,6 +166,19 @@ Deployed and read by `reporter/scripts/deploy-lending.ts`; full output with bloc
 
 KursQuoteOracle v1 (`0x787e4f515d1affa6a3dff10ee953f236db90cf30`, ERC-7726 only) stays live: KursMorphoOracle was built on it.
 
+### Global FX and gold (added 2026-11-04)
+
+EUR/USD, GBP/USD, USD/JPY, USD/CNY and XAU/USD were added to `feeds.ts` and configured through each owner (`scripts/sync-feeds.ts`):
+
+| Network | Step | Transaction |
+|---|---|---|
+| Sepolia | Safe 2-of-3 MultiSend of 5 `setFeed` | [`0xc1b8e2d8…fc1214`](https://sepolia.etherscan.io/tx/0xc1b8e2d840fcb7824432ddf16478b6a80769976d4b051acc970d96d9a4fc1214) |
+| Sepolia | first rounds: EUR/USD 1.1247, GBP/USD 1.3475, USD/JPY 158.40, USD/CNY 6.6714, XAU/USD 4,037.60 | [`0x0d30bc78…`](https://sepolia.etherscan.io/tx/0x0d30bc786213bd6e17b62cf99f1bd2fc8151e1f3cda77e0f94576e206d65f16e), [`0xbd86a3b1…`](https://sepolia.etherscan.io/tx/0xbd86a3b19385aee578b48bfb850b4d26487dea625651e74d9613569566c9adad), [`0x68340a4a…`](https://sepolia.etherscan.io/tx/0x68340a4aac85541cd349faf9343a4f92f20b3c48cced6e3c992dd8d5fa0ea637), [`0x7b23f19f…`](https://sepolia.etherscan.io/tx/0x7b23f19f7864dee04ca4c191485e9929e9cf10ae76bb5b62b402baae194c5c05), [`0x0a2f559f…`](https://sepolia.etherscan.io/tx/0x0a2f559f3a27605f56c8a87c50f2679fa0cb405dc88537f05e5a8aab7cec8454) |
+| Portaldot | multisig approve + execute of `proxy.announce` (5 `setFeed`), announced at #321950, executable from #322550 | `0x953cfc5c084782336b92be3322358bffad66fed5dacca6c350ab3e770c357c3d`, `0x844f02a61fcd283cb3f60fb734065d26950ec62dcb63089f74bdb3564e0f5e01` |
+| Portaldot | `proxy.proxyAnnounced` after the delay | PORTALDOT_FX_EXEC_PENDING |
+
+The existing adapters serve them with no new contract. Read live on Sepolia: Band `getReferenceData("EUR","JPY")` = 178.1516 (EUR/USD x USD/JPY), `("XAU","EUR")` = 3,589.94, `("GBP","CNY")` = 8.9897; DIA `getValue("XAU/USD")` = 4,037.60.
+
 ### ERC-7412 pull from the dashboard's wallet button
 
 The dashboard verified a fresh USD/IDR bundle in the browser, then a wallet (EIP-1193) sent `Multicall3.aggregate3([fulfillOracleQuery(bundle), KursConverter.convert(10000)])`: $100.00 = Rp 1,814,000.00 at round 29896728, read back from the `Converted` event. Driven by `web/e2e/wallet.spec.ts`. Tx [`0x3f73468b…d0b68a`](https://sepolia.etherscan.io/tx/0x3f73468b86a7d9a604744d13e31250d6fa87a459b5f06c28ed98be0574d0b68a).

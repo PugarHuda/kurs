@@ -8,7 +8,7 @@ const sepolia = createPublicClient({ chain: networks.sepolia.chain, transport: h
 const portaldot = createPublicClient({ chain: networks.portaldot.chain, transport: http() });
 
 test("feed ids and pairs", () => {
-  assert.equal(PAIRS.length, 11);
+  assert.equal(PAIRS.length, 16);
   // keccak256("USD/IDR"), the id the contracts and /api/feeds use
   assert.match(feedId("USD/IDR"), /^0x[0-9a-f]{64}$/);
 });

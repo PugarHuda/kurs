@@ -15,8 +15,8 @@ Portaldot Hacker House 2026 · Track: **Multi-Chain & Cross-Chain Infra**
 
 | Network | KursOracle | Status |
 |---|---|---|
-| Ethereum Sepolia | [`0xd3f6bf8e…a2cbc3`](https://sepolia.etherscan.io/address/0xd3f6bf8e595e815de11598f23170b37341a2cbc3) | live: 11 feeds pushed by the relay, ERC-7412 pull used on chain, oracle + factory + converter verified on Sourcify (exact match) |
-| **Portaldot V3 testnet** | `0x5bdd9713ddc4f11e14bd3094882401cd122656f4` ([round in the Node Console](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/299579)) | **live: 11 feeds, rounds from 5 reporters every ~64 min, mirrored unchanged to Sepolia** |
+| Ethereum Sepolia | [`0xd3f6bf8e…a2cbc3`](https://sepolia.etherscan.io/address/0xd3f6bf8e595e815de11598f23170b37341a2cbc3) | live: 16 feeds (crypto, FX majors, gold, equities, tPOT) pushed by the relay, ERC-7412 pull used on chain, oracle + factory + converter verified on Sourcify (exact match) |
+| **Portaldot V3 testnet** | `0x5bdd9713ddc4f11e14bd3094882401cd122656f4` ([round in the Node Console](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/299579)) | **live: 11 feeds, rounds from 5 reporters every ~64 min, mirrored unchanged to Sepolia; EUR, GBP, JPY, CNY and gold announced through the owner's 600-block timelock** |
 
 ![Kurs architecture](docs/architecture.png)
 
@@ -79,7 +79,7 @@ contracts/          Foundry project
   test/KursOracle.t.sol       22 tests incl. fuzz, cross-chain replay, ring buffer
 ink/kurs_consumer/  KursRemit, ink! v6 contract reading KursOracle via Solidity ABI
 reporter/           sources, signing, bundle selection, transmit, deploy (CLI: kurs)
-  src/feeds.ts                the 11 feeds and their sources (single source of truth)
+  src/feeds.ts                the 16 feeds and their sources (single source of truth)
   src/sources.ts              fetchers incl. Chainlink-on-Sepolia and AssetConversion
   src/kurs.ts                 EIP-712 signing, median, off-chain bundle checks
   src/chain.ts                deploy / configure / transmit
@@ -123,7 +123,8 @@ Revive charges a storage deposit per byte of code and per storage item (`deposit
 |---|---|---|
 | BTC/USD, ETH/USD | Binance, Coinbase, Kraken, OKX, CoinGecko, CoinPaprika, DefiLlama, **Chainlink (Sepolia)** | 50 bps deviation, 1 h heartbeat |
 | DOT/USD, USDT/USD | exchanges + aggregators | |
-| **USD/IDR** | open.er-api, Yahoo FX, CoinGecko (USDT/IDR), Frankfurter (ECB reference rate), fawazahmed0 currency-api | for Rupiah apps |
+| **EUR/USD, GBP/USD, USD/JPY, USD/CNY, USD/IDR** | Frankfurter (ECB reference rate), open.er-api, fawazahmed0 currency-api, Yahoo FX, CoinGecko (USDT in that currency) | global FX majors plus the Rupiah; quoted the market way, 25 bps deviation, 1 h heartbeat |
+| **XAU/USD** (gold, troy ounce) | gold-api.com spot, PAX Gold (Kraken, CoinGecko), COMEX front month (Yahoo) | for gold-backed stablecoins and RWA collateral; 150 bps spread limit because futures carry a small contango |
 | TSLA, NVDA, AAPL, AMZN, META /USD | Yahoo, Nasdaq quote API, TradingView scanner; a reporter needs at least 2 | the tokenised stocks that already trade on Portaldot |
 | **tPOT/pUSD** | Portaldot `pallet-asset-conversion`, median of 5 quotes 50 blocks apart, thin pools refused | native Portaldot price, exportable |
 
@@ -241,7 +242,7 @@ What the tests cover: median of odd and even sets, a 2-of-5 lying minority canno
 | **Pyth `IPyth`** (`getPrice`, `getPriceNoOlderThan`, `getPriceUnsafe`, `updatePriceFeeds`) via `KursPyth`; price id = Kurs feedId | apps already integrated with Pyth switch by changing one address. Pyth's pull flow maps 1:1: `updatePriceFeeds([bundle payloads from /api/bundle])` verifies them on chain, fee 0. `conf` is the feed's spread bound | Sepolia (Sourcify-verified; a real `updatePriceFeeds` tx is in evidence) |
 | **Morpho Blue `IOracle.price()`** via `KursMorphoOracle`, one per market, priced through ERC-7726 | Morpho Blue markets: collateral value in the loan token scaled by 1e36, stale feeds revert with ERC-7412 | Sepolia: BTC collateral / 2-decimal Rupiah loan token (IDRX-style), `price()` = 1 BTC in Rp |
 | **DIA `getValue("BTC/USD")`** via `KursDIA`; key = the Kurs pair, 8 decimals, `(0, 0)` for an unknown key exactly like DIA | DIA is the oracle most Polkadot-ecosystem dApps (Moonbeam, Astar) already read: one address change | **Portaldot V3** [`0x969b…dfd9`](docs/dia-portaldot.txt) (`getValue("tPOT/pUSD")` returns Portaldot's own native price) and Sepolia (Sourcify exact, reads in [`docs/compat-sepolia.txt`](docs/compat-sepolia.txt)) |
-| **Band `IStdReference.getReferenceData(base, quote)`** + `getReferenceDataBulk` via `KursBand`; every symbol priced through USD, so `("BTC", "IDR")` is a Rupiah cross rate | Band integrations (also on Astar and Moonbeam) | Sepolia (Sourcify exact) |
+| **Band `IStdReference.getReferenceData(base, quote)`** + `getReferenceDataBulk` via `KursBand`; every symbol priced through USD, so any pair of the 16 feeds is a cross rate: `("EUR", "JPY")`, `("XAU", "EUR")`, `("BTC", "IDR")` | Band integrations (also on Astar and Moonbeam) | Sepolia (Sourcify exact) |
 | **API3 `IApi3ReaderProxy.read()`** via `KursApi3ReaderProxy`, one per feed, 18 decimals | API3 dAPI consumers | Sepolia: BTC/USD, USD/IDR |
 | **Chronicle `read()` / `readWithAge()` / `tryRead*`** via `KursChronicle`, one per feed | Sky (MakerDAO) style consumers | Sepolia: BTC/USD |
 | **Aave v3 `IPriceOracleGetter.getAssetPrice(asset)`** via `KursAaveOracle`, USD base 1e8, Rupiah stablecoin priced as 1/(USD/IDR) | an Aave v3 fork's `PoolAddressesProvider`. This interface has no timestamp, so the adapter reverts on stale rounds (ERC-7412) | Sepolia |

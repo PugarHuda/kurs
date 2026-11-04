@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
-const FEED_COUNT = 11;
+const FEED_COUNT = 16;
 // API tests call the deployed functions directly: the Vite preview proxy answers OPTIONS
 // itself and is a second hop that can fail on its own
 const API = process.env.KURS_BASE_URL ?? "https://kurs-ten-zeta.vercel.app";
@@ -148,7 +148,8 @@ test("/api/substrate reads every feed through ReviveApi_call and agrees with the
   const body = await r.json();
   expect(body.via).toContain("ReviveApi_call");
   expect(body.block).toBeGreaterThan(0);
-  expect(body.feeds).toHaveLength(11);
+  // every feed is read, or listed as not configured yet on Portaldot (a new feed waits out the owner's timelock)
+  expect(body.feeds.length + (body.notConfigured?.length ?? 0)).toBe(FEED_COUNT);
   for (const f of body.feeds) expect(Number(f.answer)).toBeGreaterThan(0);
 });
 

@@ -25,6 +25,7 @@ export async function readViaSubstrate(api: ApiPromise, oracle: Address, pairs: 
   const head = await api.rpc.chain.getHeader();
   const at = await api.at(head.hash);
   const reads: SubstrateRead[] = [];
+  const skipped: string[] = [];
   for (const pair of pairs) {
     const data = encodeFunctionData({ abi: kursOracleAbi, functionName: "latestRound", args: [keccak256(toBytes(pair))] });
     // origin, dest, value, gas_limit (None = max), storage_deposit_limit (None), input
@@ -32,7 +33,11 @@ export async function readViaSubstrate(api: ApiPromise, oracle: Address, pairs: 
       result: { ok?: { flags: number; data: Hex }; err?: unknown };
     };
     if (!res.result.ok) throw new Error(`${pair}: ReviveApi_call failed ${JSON.stringify(res.result.err)}`);
-    if (res.result.ok.flags & 1) throw new Error(`${pair}: contract reverted`);
+    // reverted: UnknownFeed, a feed listed in feeds.ts that this oracle's owner has not configured yet
+    if (res.result.ok.flags & 1) {
+      skipped.push(pair);
+      continue;
+    }
     const [roundId, answer, , updatedAt] = decodeFunctionResult({
       abi: kursOracleAbi,
       functionName: "latestRound",
@@ -40,5 +45,5 @@ export async function readViaSubstrate(api: ApiPromise, oracle: Address, pairs: 
     }) as readonly [bigint, bigint, bigint, bigint];
     reads.push({ pair, roundId, answer, updatedAt });
   }
-  return { block: head.number.toNumber(), blockHash: head.hash.toHex(), reads };
+  return { block: head.number.toNumber(), blockHash: head.hash.toHex(), reads, skipped };
 }

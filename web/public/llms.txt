@@ -2,7 +2,7 @@
 
 > Signed price feeds for Portaldot V3 (pallet-revive) and Ethereum Sepolia. Five reporters sign each observation (EIP-712); the contract takes the median when a strict majority agrees. Readable from Solidity, ink! and Substrate, and through the Chainlink, Pyth, DIA, Band, API3, Chronicle, Aave v3, ERC-7726, Euler IPriceOracle, Silo v2 and Morpho Blue interfaces, plus an on-chain TWAP.
 
-Feeds: BTC/USD, ETH/USD, DOT/USD, USDT/USD, USD/IDR, TSLA/USD, NVDA/USD, AAPL/USD, AMZN/USD, META/USD, tPOT/pUSD. 8 decimals. feedId = keccak256(pair), e.g. keccak256("USD/IDR"). The HTTP API also accepts pairs case-insensitively with -, _ or / (usd-idr).
+Feeds: BTC/USD, ETH/USD, DOT/USD, USDT/USD, EUR/USD, GBP/USD, USD/JPY, USD/CNY, USD/IDR, XAU/USD (gold), TSLA/USD, NVDA/USD, AAPL/USD, AMZN/USD, META/USD, tPOT/pUSD. 8 decimals. feedId = keccak256(pair), e.g. keccak256("USD/IDR"). The HTTP API also accepts pairs case-insensitively with -, _ or / (eur-usd).
 
 ## HTTP API (no key, CORS open)
 

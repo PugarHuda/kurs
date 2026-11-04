@@ -220,6 +220,13 @@ export interface TransmitResult {
  * increase and observations to be fresh, so this is as safe as minute rounds;
  * it caps such a chain at about one round per 64 minutes per feed.
  */
+/** Feed ids the chain's oracle has a config for (setFeed), lower-cased. */
+export async function onChainFeeds(chain: ChainKey): Promise<Set<string>> {
+  const d = loadDeployment(chain)!;
+  const ids = await clients(chain).pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "feedIds" });
+  return new Set(ids.map((x) => x.toLowerCase()));
+}
+
 export const SLOT_ALIGNED: Partial<Record<ChainKey, boolean>> = { portaldot: true };
 const HISTORY = 64n;
 
@@ -243,16 +250,22 @@ export async function transmit(
   if (!d) throw new Error(`no deployment for ${chain}`);
   const { pub, wallet } = clients(chain, transmitter);
   if (!wallet) throw new Error("no wallet");
-  const [quorum, reporters, maxObservationAge] = await Promise.all([
+  const [quorum, reporters, maxObservationAge, configured] = await Promise.all([
     pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "quorum" }),
     pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "reporters" }),
     pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "maxObservationAge" }),
+    onChainFeeds(chain),
   ]);
   const now = Math.floor(Date.now() / 1000);
   const results: TransmitResult[] = [];
 
   for (const f of feeds) {
     const id = feedId(f.pair);
+    // a feed added to feeds.ts goes live on a chain only once its owner has run setFeed there
+    if (!configured.has(id.toLowerCase())) {
+      results.push({ chain, pair: f.pair, roundId: 0n, skipped: "not configured on this chain (owner: setFeed)" });
+      continue;
+    }
     let obs: SignedObservation[];
     try {
       obs = await selectBundle(observations.filter((o) => o.feedId === id), {
@@ -355,9 +368,10 @@ export async function relayExact(
   if (!d) throw new Error(`no deployment for ${chain}`);
   const { pub, wallet } = clients(chain, transmitter);
   if (!wallet) throw new Error("no wallet");
-  const [reporters, maxObservationAge] = await Promise.all([
+  const [reporters, maxObservationAge, configured] = await Promise.all([
     pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "reporters" }),
     pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "maxObservationAge" }),
+    onChainFeeds(chain),
   ]);
   const results: TransmitResult[] = [];
   for (const b of bundles) {
@@ -365,6 +379,10 @@ export async function relayExact(
     const { feedId: id, roundId, pair } = b[0];
     const f = FEEDS.find((x) => x.pair === pair);
     const base = { chain, pair, roundId };
+    if (!configured.has(id.toLowerCase())) {
+      results.push({ ...base, skipped: `mirror: not configured on ${chain}` });
+      continue;
+    }
     const [latestId] = await pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "latestRound", args: [id] });
     if (roundId <= latestId) {
       results.push({ ...base, skipped: `mirror: ${chain} already at round ${latestId}` });

@@ -67,8 +67,8 @@ const bits = (bitmap: number, n: number) =>
 const params = new URLSearchParams(location.search);
 const deployments = DEPLOYMENTS.sort((a, b) => ["portaldot", "sepolia", "local"].indexOf(a.chain) - ["portaldot", "sepolia", "local"].indexOf(b.chain));
 let current: Deployment | undefined = deployments.find((d) => d.chain === params.get("net")) ?? deployments[0];
-// an unknown or oddly spelled feed (?feed=usd-idr) resolves like the API does, else USD/IDR
-let selected = findFeed(params.get("feed"))?.pair ?? "USD/IDR";
+// an unknown or oddly spelled feed (?feed=eur-usd) resolves like the API does, else BTC/USD
+let selected = findFeed(params.get("feed"))?.pair ?? "BTC/USD";
 if ((params.has("feed") && params.get("feed") !== selected) || (params.has("net") && params.get("net") !== current?.chain)) history.replaceState(null, "", `?net=${current?.chain ?? "portaldot"}&feed=${encodeURIComponent(selected)}`);
 let last: Snapshot | undefined;
 const others = new Map<string, Snapshot>();
@@ -509,7 +509,7 @@ function renderConvert() {
   if (!from.options.length) {
     const opts = (sel: string) => ASSETS.map((a) => `<option${a === sel ? " selected" : ""}>${esc(a)}</option>`).join("");
     from.innerHTML = opts("USD");
-    to.innerHTML = opts("IDR");
+    to.innerHTML = opts("EUR");
     form.addEventListener("input", renderConvert);
     form.addEventListener("submit", (e) => e.preventDefault());
   }

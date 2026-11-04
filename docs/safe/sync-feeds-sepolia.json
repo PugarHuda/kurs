@@ -1,10 +1,10 @@
 {
   "version": "1.0",
   "chainId": "11155111",
-  "createdAt": 1793802275511,
+  "createdAt": 1793804924648,
   "meta": {
     "name": "Kurs: sync feed config with feeds.ts",
-    "description": "TSLA/USD: heartbeat 3600 -> 14400 | NVDA/USD: heartbeat 3600 -> 14400 | AAPL/USD: heartbeat 3600 -> 14400 | AMZN/USD: heartbeat 3600 -> 14400 | META/USD: heartbeat 3600 -> 14400",
+    "description": "EUR/USD: decimals 0 -> 8; maxSpreadBps 0 -> 100; heartbeat 0 -> 3600; minAnswer 0 -> 50000000; maxAnswer 0 -> 200000000; description  -> EUR / USD (Euro) | GBP/USD: decimals 0 -> 8; maxSpreadBps 0 -> 100; heartbeat 0 -> 3600; minAnswer 0 -> 50000000; maxAnswer 0 -> 300000000; description  -> GBP / USD (British pound) | USD/JPY: decimals 0 -> 8; maxSpreadBps 0 -> 100; heartbeat 0 -> 3600; minAnswer 0 -> 5000000000; maxAnswer 0 -> 50000000000; description  -> USD / JPY (Japanese yen) | USD/CNY: decimals 0 -> 8; maxSpreadBps 0 -> 100; heartbeat 0 -> 3600; minAnswer 0 -> 300000000; maxAnswer 0 -> 1500000000; description  -> USD / CNY (Chinese yuan) | XAU/USD: decimals 0 -> 8; maxSpreadBps 0 -> 150; heartbeat 0 -> 3600; minAnswer 0 -> 50000000000; maxAnswer 0 -> 2000000000000; description  -> XAU / USD (gold, troy ounce)",
     "txBuilderVersion": "1.16.5",
     "createdFromSafeAddress": "0x1036B446bBbbe0d0973cD7Bd57FD274Fd76dFf36",
     "createdFromOwnerAddress": ""
@@ -56,13 +56,13 @@
         ]
       },
       "contractInputsValues": {
-        "feedId": "0x13ec3ae6d9a65df1ae5953598775a86c251d530770729433b0e40d1f2141afd6",
-        "description": "TSLA / USD (equity)",
+        "feedId": "0xa9226449042e36bf6865099eec57482aa55e3ad026c315a0e4a692b776c318ca",
+        "description": "EUR / USD (Euro)",
         "decimals": "8",
-        "heartbeat": "14400",
+        "heartbeat": "3600",
         "maxSpreadBps": "100",
-        "minAnswer": "100000000",
-        "maxAnswer": "10000000000000"
+        "minAnswer": "50000000",
+        "maxAnswer": "200000000"
       }
     },
     {
@@ -111,13 +111,13 @@
         ]
       },
       "contractInputsValues": {
-        "feedId": "0xd7f402a699378a97cf4b1f46fb772a465535d2fead1457bcb27b58312638e264",
-        "description": "NVDA / USD (equity)",
+        "feedId": "0xfd121bde813a3463e16ad2a4ea4103a6a122fbe2cdb07a80d4d293be07bb29fa",
+        "description": "GBP / USD (British pound)",
         "decimals": "8",
-        "heartbeat": "14400",
+        "heartbeat": "3600",
         "maxSpreadBps": "100",
-        "minAnswer": "100000000",
-        "maxAnswer": "10000000000000"
+        "minAnswer": "50000000",
+        "maxAnswer": "300000000"
       }
     },
     {
@@ -166,13 +166,13 @@
         ]
       },
       "contractInputsValues": {
-        "feedId": "0x057702f36a95d62dffc7f6a121ad53458ce83b25464c9846baa841808fee4f2f",
-        "description": "AAPL / USD (equity)",
+        "feedId": "0x35b8bafff3570683af968b8d36b91b1a19465141d9712425e9f76c68ff8cb152",
+        "description": "USD / JPY (Japanese yen)",
         "decimals": "8",
-        "heartbeat": "14400",
+        "heartbeat": "3600",
         "maxSpreadBps": "100",
-        "minAnswer": "100000000",
-        "maxAnswer": "10000000000000"
+        "minAnswer": "5000000000",
+        "maxAnswer": "50000000000"
       }
     },
     {
@@ -221,13 +221,13 @@
         ]
       },
       "contractInputsValues": {
-        "feedId": "0x8eb6660573f5b4d20aaa061371033891224e5fadc80278e61228dc8937629bc0",
-        "description": "AMZN / USD (equity)",
+        "feedId": "0x1f9bb0ab89deca4249bc102d499c966fadfa72010d948bc0b103627a8704c15c",
+        "description": "USD / CNY (Chinese yuan)",
         "decimals": "8",
-        "heartbeat": "14400",
+        "heartbeat": "3600",
         "maxSpreadBps": "100",
-        "minAnswer": "100000000",
-        "maxAnswer": "10000000000000"
+        "minAnswer": "300000000",
+        "maxAnswer": "1500000000"
       }
     },
     {
@@ -276,13 +276,13 @@
         ]
       },
       "contractInputsValues": {
-        "feedId": "0xb4b2a82b96eabbf746992ac923dd0564b13fd74a357308110e549a4f6bbecf9a",
-        "description": "META / USD (equity)",
+        "feedId": "0x85de9facb9f703cb8b77bca3163eb0ad1780f77bf724319b6e5c67b12837e086",
+        "description": "XAU / USD (gold, troy ounce)",
         "decimals": "8",
-        "heartbeat": "14400",
-        "maxSpreadBps": "100",
-        "minAnswer": "100000000",
-        "maxAnswer": "10000000000000"
+        "heartbeat": "3600",
+        "maxSpreadBps": "150",
+        "minAnswer": "50000000000",
+        "maxAnswer": "2000000000000"
       }
     }
   ]

@@ -16,6 +16,7 @@ export type SourceId =
   | "fawaz-fx"
   | "nasdaq"
   | "tradingview"
+  | "gold-api"
   | "portaldot-assetconversion";
 
 export interface FeedConfig {
@@ -125,6 +126,52 @@ export const FEEDS: FeedConfig[] = [
     maxAnswer: d8(100_000),
     minSources: 2,
     sources: { "er-api": "IDR", yahoo: "IDR=X", coingecko: "tether:idr", frankfurter: "IDR", "fawaz-fx": "idr" },
+  },
+  // Global FX and gold: the reference prices any stablecoin, remittance or RWA app needs.
+  // Majors quoted the market way (EUR/USD, GBP/USD, XAU/USD in USD; USD/JPY, USD/CNY per USD).
+  // Five independent public sources each: ECB reference (frankfurter), open.er-api, the
+  // fawazahmed0 currency API, Yahoo Finance and CoinGecko's fiat rates.
+  ...(
+    [
+      ["EUR/USD", "Euro", "inv:EUR", "EURUSD=X", "inv:eur", 0.5, 2],
+      ["GBP/USD", "British pound", "inv:GBP", "GBPUSD=X", "inv:gbp", 0.5, 3],
+      ["USD/JPY", "Japanese yen", "JPY", "JPY=X", "jpy", 50, 500],
+      ["USD/CNY", "Chinese yuan", "CNY", "CNY=X", "cny", 3, 15],
+    ] as const
+  ).map(
+    ([pair, name, iso, yahoo, fawaz, lo, hi]): FeedConfig => ({
+      pair,
+      description: `${pair.replace("/", " / ")} (${name})`,
+      decimals: 8,
+      heartbeat: 3600,
+      deviationBps: 25,
+      maxSpreadBps: 100,
+      minAnswer: d8(lo),
+      maxAnswer: d8(hi),
+      minSources: 2,
+      sources: {
+        "er-api": iso,
+        frankfurter: iso,
+        "fawaz-fx": fawaz,
+        yahoo,
+        // USDT priced in the currency; ~USD (the USD/IDR feed reads it the same way)
+        coingecko: iso.startsWith("inv:") ? `inv:tether:${iso.slice(4).toLowerCase()}` : `tether:${iso.toLowerCase()}`,
+      },
+    }),
+  ),
+  {
+    pair: "XAU/USD",
+    description: "XAU / USD (gold, troy ounce)",
+    decimals: 8,
+    heartbeat: 3600,
+    deviationBps: 50,
+    maxSpreadBps: 150,
+    minAnswer: d8(500),
+    maxAnswer: d8(20_000),
+    minSources: 2,
+    // spot gold (gold-api.com), PAX Gold (1 token = 1 oz, on Kraken and CoinGecko) and COMEX
+    // front-month futures (Yahoo, ~0.2% contango). ponytail: a licensed LBMA fix is the mainnet upgrade
+    sources: { "gold-api": "XAU", kraken: "PAXGUSD", coingecko: "pax-gold", yahoo: "GC=F" },
   },
   // Tokenised stocks already trade in AssetConversion pools on Portaldot V3
   // (TSLA, NVDA, AAPL, AMZN, META against DUCAT) with no reference price.

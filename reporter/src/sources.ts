@@ -127,6 +127,24 @@ export async function portaldotQuote(spec: string): Promise<number> {
   return prices[SAMPLES >> 1];
 }
 
+// CoinGecko's free API allows a few calls a minute. Every feed asks within the same tick,
+// so requests made within 100 ms are coalesced into one simple/price call for all ids and
+// currencies (16 feeds: 1 request instead of 9).
+let cgPending: { ids: Set<string>; vs: Set<string>; done: Promise<any> } | undefined;
+function coingeckoBatch(id: string, vs: string): Promise<any> {
+  if (!cgPending) {
+    const batch = { ids: new Set<string>(), vs: new Set<string>(), done: undefined as unknown as Promise<any> };
+    batch.done = new Promise((res) => setTimeout(res, 100)).then(() => {
+      if (cgPending === batch) cgPending = undefined;
+      return getJson(`https://api.coingecko.com/api/v3/simple/price?ids=${[...batch.ids].join(",")}&vs_currencies=${[...batch.vs].join(",")}`);
+    });
+    cgPending = batch;
+  }
+  cgPending.ids.add(id);
+  cgPending.vs.add(vs);
+  return cgPending.done;
+}
+
 // ---------------------------------------------------------------- registry
 
 export const SOURCES: Record<SourceId, Fetcher> = {
@@ -140,9 +158,11 @@ export const SOURCES: Record<SourceId, Fetcher> = {
   okx: async (s) => num((await getJson(`https://www.okx.com/api/v5/market/ticker?instId=${s}`)).data?.[0]?.last),
   coingecko: async (s) => {
     const [id, vs = "usd"] = s.split(":");
-    const r = await getJson(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${vs}`);
+    const r = await coingeckoBatch(id, vs);
     return num(r[id]?.[vs]);
   },
+  // spot precious metals, USD per troy ounce
+  "gold-api": async (s) => num((await getJson(`https://api.gold-api.com/price/${s}`)).price),
   coinpaprika: async (s) => num((await getJson(`https://api.coinpaprika.com/v1/tickers/${s}`)).quotes?.USD?.price),
   defillama: async (s) => num((await getJson(`https://coins.llama.fi/prices/current/${s}`)).coins?.[s]?.price),
   "chainlink-sepolia": async (addr) => {

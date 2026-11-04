@@ -81,7 +81,10 @@ export async function readFeed(feed: FeedConfig): Promise<FeedReading> {
   const readings = await Promise.all(
     entries.map(async ([source, symbol]): Promise<SourceReading> => {
       try {
-        return { source, price: await SOURCES[source](symbol) };
+        // "inv:SYM": the source quotes units per USD; the feed wants USD per unit (EUR/USD, XAU/USD)
+        const inv = symbol.startsWith("inv:");
+        const p = await SOURCES[source](inv ? symbol.slice(4) : symbol);
+        return { source, price: inv ? 1 / p : p };
       } catch (e) {
         return { source, error: (e as Error).message.slice(0, 120) };
       }

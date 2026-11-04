@@ -2,12 +2,13 @@
 // 200 when every feed with data is within 2x its heartbeat (Portaldot: the 64-minute
 // slot-aligned cadence), 503 otherwise, so any uptime monitor can watch the relay.
 export { preflight as OPTIONS } from "../lib/http.js";
-import { createPublicClient, http, keccak256, toBytes, parseAbi, type Address } from "viem";
+import { createPublicClient, http, keccak256, toBytes, parseAbi, type Address, type Hex } from "viem";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };
 import { FEEDS } from "../reporter/src/feeds.js";
 
 const abi = parseAbi(["function latestRound(bytes32) view returns (uint80, int192, uint64, uint64)"]);
+const feedIdsAbi = parseAbi(["function feedIds() view returns (bytes32[])"]);
 const NETS = [
   { d: portaldot, rpc: "https://test-evm-rpc-v3.portaldot.dev", minHeartbeat: 64 * 60 },
   { d: sepolia, rpc: "https://ethereum-sepolia-rpc.publicnode.com", minHeartbeat: 0 },
@@ -18,8 +19,13 @@ export async function GET() {
   const networks = await Promise.all(
     NETS.map(async ({ d, rpc, minHeartbeat }) => {
       const c = createPublicClient({ transport: http(rpc, { batch: true, retryCount: 2 }) });
+      // feeds the owner has not configured on this chain yet (setFeed) are listed, not failures
+      const configured = new Set(
+        (await c.readContract({ address: d.oracle as Address, abi: feedIdsAbi, functionName: "feedIds" }).catch(() => [] as readonly Hex[])).map((x) => x.toLowerCase()),
+      );
       const feeds = await Promise.all(
         FEEDS.map(async (f) => {
+          if (configured.size && !configured.has(keccak256(toBytes(f.pair)).toLowerCase())) return { pair: f.pair, status: "not configured" };
           try {
             const [roundId, answer, , updatedAt] = await c.readContract({
               address: d.oracle as Address,
