@@ -412,7 +412,7 @@ function offBy(implied?: number, kurs?: number) {
   return `${((r - 1) * 100).toFixed(1)}%`;
 }
 
-async function renderPools(s: Snapshot) {
+async function renderPools(s: Snapshot, attempt = 1): Promise<void> {
   const el = $("#pools");
   try {
     // route: 1 stock -> DUCAT -> tPOT -> pUSD, all through pallet-asset-conversion
@@ -444,6 +444,8 @@ async function renderPools(s: Snapshot) {
       </table>
       <p class="muted">Implied price routes each stock through its DUCAT pool, the tPOT/DUCAT pool and the tPOT/pUSD pool, all read live from pallet-asset-conversion. A lending market that priced these tokens from their own pools would accept them at the wrong value; one that reads Kurs would not.</p>`;
   } catch (e) {
+    // the public node is sometimes slow: try twice more before showing the error
+    if (attempt < 3) return void setTimeout(() => void renderPools(last ?? s, attempt + 1), 4000);
     el.innerHTML = `<p class="muted">Could not read Portaldot pools: ${esc((e as Error).message)}.</p>`;
   }
 }

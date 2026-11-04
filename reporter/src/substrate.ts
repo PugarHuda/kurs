@@ -30,11 +30,13 @@ export async function readViaSubstrate(api: ApiPromise, oracle: Address, pairs: 
     const data = encodeFunctionData({ abi: kursOracleAbi, functionName: "latestRound", args: [keccak256(toBytes(pair))] });
     // origin, dest, value, gas_limit (None = max), storage_deposit_limit (None), input
     const res = (await (at.call as any).reviveApi.call(ORIGIN, oracle, 0, null, null, data)).toJSON() as {
-      result: { ok?: { flags: number; data: Hex }; err?: unknown };
+      result: { ok?: { flags: number | { bits: number }; data: Hex }; err?: unknown };
     };
     if (!res.result.ok) throw new Error(`${pair}: ReviveApi_call failed ${JSON.stringify(res.result.err)}`);
     // reverted: UnknownFeed, a feed listed in feeds.ts that this oracle's owner has not configured yet
-    if (res.result.ok.flags & 1) {
+    // ReturnFlags arrive as { bits } from the runtime API (a bare number in older metadata)
+    const flags = res.result.ok.flags;
+    if ((typeof flags === "number" ? flags : flags.bits) & 1) {
       skipped.push(pair);
       continue;
     }

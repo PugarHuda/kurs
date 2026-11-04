@@ -638,7 +638,8 @@
                           "ok",
                           "stale",
                           "no data",
-                          "unreadable"
+                          "unreadable",
+                          "not configured"
                         ]
                       },
                       "error": {
@@ -709,6 +710,13 @@
                 }
               }
             }
+          },
+          "notConfigured": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Feeds in feeds.ts this oracle's owner has not configured yet (the read reverts UnknownFeed)"
           }
         }
       },
