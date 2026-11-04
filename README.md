@@ -217,9 +217,9 @@ The dashboard does not ask you to trust it. For the selected feed it fetches the
 
 | Suite | Count | Command |
 |---|---|---|
-| Solidity (Foundry, 1,000 fuzz runs), incl. 7 ERC-7412 pull tests | 29 | `cd contracts && forge test` |
-| Reporter unit + anvil e2e (vitest), incl. ERC-7412 pull on a chain without Multicall3 | 16 | `cd reporter && npm test` |
-| Dashboard QA (Playwright, desktop + mobile, axe accessibility) against the production build and live Sepolia | 16 | `cd web && npm run test:e2e` (or `KURS_BASE_URL=https://kurs-ten-zeta.vercel.app`) |
+| Solidity (Foundry, 1,000 fuzz runs, invariants over 128k transmits), incl. ERC-7412 pull and 9 protocol adapters | 58 | `cd contracts && forge test` |
+| Reporter unit + anvil e2e (vitest), incl. ERC-7412 pull on a chain without Multicall3 | 17 | `cd reporter && npm test` |
+| Dashboard QA (Playwright, desktop + mobile, axe accessibility) against the production build and live Sepolia, plus every API response checked against `openapi.json` | 38 | `cd web && npm run test:e2e` (or `KURS_BASE_URL=https://kurs-ten-zeta.vercel.app`) |
 | **Cross-VM: ink! v6 reads the Solidity oracle** (local ink-node) | end to end | `cd reporter && npm run ink-e2e` |
 
 The cross-VM run deploys KursOracle, transmits a 5-reporter USD/IDR round, deploys KursRemit (ink! v6, PolkaVM), and checks that `KursRemit.latest()` returns exactly the oracle's round, then sends `quote_and_log` as a real transaction. Output: [`docs/ink-e2e-local.txt`](docs/ink-e2e-local.txt). ink-node v0.47 does not accept EVM bytecode, so locally the oracle is compiled to PolkaVM with resolc 0.5.0; Portaldot V3 accepts EVM bytecode and runs the solc build. KursRemit only sees an H160 that speaks the Solidity ABI, so its code is the same in both cases.
@@ -236,11 +236,16 @@ What the tests cover: median of odd and even sets, a 2-of-5 lying minority canno
 | **ERC-7726** `getQuote(amount, base, quote)` via `KursQuoteOracle` | Euler v2 and other modular lenders; BTC, ETH, USD (840), IDR (360), with cross rates through USD (1 BTC in Rupiah) | Sepolia; Portaldot estimate 229 tPOT, deferred so the relay keeps its gas |
 | **Pyth `IPyth`** (`getPrice`, `getPriceNoOlderThan`, `getPriceUnsafe`, `updatePriceFeeds`) via `KursPyth`; price id = Kurs feedId | apps already integrated with Pyth switch by changing one address. Pyth's pull flow maps 1:1: `updatePriceFeeds([bundle payloads from /api/bundle])` verifies them on chain, fee 0. `conf` is the feed's spread bound | Sepolia (Sourcify-verified; a real `updatePriceFeeds` tx is in evidence) |
 | **Morpho Blue `IOracle.price()`** via `KursMorphoOracle`, one per market, priced through ERC-7726 | Morpho Blue markets: collateral value in the loan token scaled by 1e36, stale feeds revert with ERC-7412 | Sepolia: BTC collateral / 2-decimal Rupiah loan token (IDRX-style), `price()` = 1 BTC in Rp |
+| **DIA `getValue("BTC/USD")`** via `KursDIA`; key = the Kurs pair, 8 decimals, `(0, 0)` for an unknown key exactly like DIA | DIA is the oracle most Polkadot-ecosystem dApps (Moonbeam, Astar) already read: one address change | Sepolia (Sourcify exact), reads in [`docs/compat-sepolia.txt`](docs/compat-sepolia.txt) |
+| **Band `IStdReference.getReferenceData(base, quote)`** + `getReferenceDataBulk` via `KursBand`; every symbol priced through USD, so `("BTC", "IDR")` is a Rupiah cross rate | Band integrations (also on Astar and Moonbeam) | Sepolia (Sourcify exact) |
+| **API3 `IApi3ReaderProxy.read()`** via `KursApi3ReaderProxy`, one per feed, 18 decimals | API3 dAPI consumers | Sepolia: BTC/USD, USD/IDR |
+| **Chronicle `read()` / `readWithAge()` / `tryRead*`** via `KursChronicle`, one per feed | Sky (MakerDAO) style consumers | Sepolia: BTC/USD |
+| **Aave v3 `IPriceOracleGetter.getAssetPrice(asset)`** via `KursAaveOracle`, USD base 1e8, Rupiah stablecoin priced as 1/(USD/IDR) | an Aave v3 fork's `PoolAddressesProvider`. This interface has no timestamp, so the adapter reverts on stale rounds (ERC-7412) | Sepolia |
 | **Substrate runtime API** `ReviveApi_call` | Polkadot wallets, polkadot.js / PAPI clients, off-chain workers: no EVM RPC needed | Portaldot: [`/api/substrate`](https://kurs-ten-zeta.vercel.app/api/substrate), `reporter/src/substrate.ts` |
 | ink! v6 cross-contract call (Solidity ABI) | ink! contracts on pallet-revive | `ink/kurs_consumer` |
 | **MCP server** at [`/api/mcp`](https://kurs-ten-zeta.vercel.app/api/mcp) (Streamable HTTP, stateless): tools `list_feeds`, `get_price`, `convert`, `get_history`, `get_signed_bundle` | AI agents (Claude, Cursor, any MCP client): ask for a price and get the on-chain signed round, not a scraped number | Vercel; add it with `claude mcp add --transport http kurs https://kurs-ten-zeta.vercel.app/api/mcp`; [`/llms.txt`](https://kurs-ten-zeta.vercel.app/llms.txt) describes the API for LLMs |
 | **npm package [`kurs-oracle`](https://www.npmjs.com/package/kurs-oracle)** (`npm i kurs-oracle viem`, source in [`sdk/`](sdk/)) on viem: `getPrice`, `fetchBundle`, `writeWithFreshPrice` (ERC-7412 in one call), ABIs and live addresses | TypeScript dapps and bots | `sdk/`, tested in CI against the live contracts |
-| HTTP: `/api/feeds`, `/api/bundle`, `/api/health`, `/api/substrate`, `/api/history` (full round history from `RoundUpdated` logs, past the 64-round buffer) | dashboards, ERC-7412 clients, monitors, indexers | Vercel; OpenAPI 3.1 spec at [`/openapi.json`](https://kurs-ten-zeta.vercel.app/openapi.json), linted by Redocly and contract-tested against the live responses |
+| HTTP: `/api/feeds`, `/api/bundle`, `/api/health`, `/api/substrate`, `/api/history` (full round history from `RoundUpdated` logs, past the 64-round buffer), `/api/metrics` (Prometheus: feed age, answer, freshness, relayer gas balance) | dashboards, ERC-7412 clients, monitors and Grafana, indexers | Vercel; OpenAPI 3.1 spec at [`/openapi.json`](https://kurs-ten-zeta.vercel.app/openapi.json), linted by Redocly and contract-tested against the live responses |
 
 ## Governance: a native Portaldot multisig owns the oracle
 
@@ -267,7 +272,7 @@ On Ethereum Sepolia the same role belongs to a **2-of-3 Safe** (`reporter/script
 
 ## Roadmap
 
-- Done during the hacker house: oracle, clones, ring buffer, push relay and ERC-7412 pull, bundle API, 11 feeds, ink! v6 consumer verified cross-VM, dashboard with in-browser signature verification, live on Portaldot V3 and Sepolia with an hourly relay and /api/health, ERC-7412 pull executed on both chains, owner handed to a native 2-of-3 pallet-multisig (Portaldot) and a 2-of-3 Safe (Sepolia), 103 automated tests incl. Foundry invariants over 128k random transmits, Slither in CI with every finding triaged in [docs/security.md](docs/security.md), Lighthouse 100/100/100/100 on mobile.
+- Done during the hacker house: oracle, clones, ring buffer, push relay and ERC-7412 pull, bundle API, 11 feeds, ink! v6 consumer verified cross-VM, dashboard with in-browser signature verification, live on Portaldot V3 and Sepolia with an hourly relay and /api/health, ERC-7412 pull executed on both chains, owner handed to a native 2-of-3 pallet-multisig (Portaldot) and a 2-of-3 Safe (Sepolia), 113 automated tests incl. Foundry invariants over 128k random transmits, Slither in CI with every finding triaged in [docs/security.md](docs/security.md), Lighthouse 100/100/100/100 on mobile.
 - Next: independent reporter operators from the Portaldot community; Kurs reporters as operators of the runtime `Oracle` pallet, so native pallets and contracts read the same prices; a read precompile proposal for the `Oracle` pallet; more chains in the relay (Base, BSC, Arbitrum), plus the bridge at bridge.portaldot.dev for POT-denominated feeds.
 
 ## Prior work and third-party code

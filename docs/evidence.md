@@ -101,6 +101,12 @@ Reporters (quorum 3 of 5): `0x5Fd0d3Ab…a21F05`, `0x1D98Ff9a…fDbaB6`, `0xC0c1
 | KursQuoteOracle (ERC-7726 getQuote: BTC, ETH, USD, IDR, pivots through USD) | [`0x787e4f515d1affa6a3dff10ee953f236db90cf30`](https://sepolia.etherscan.io/address/0x787e4f515d1affa6a3dff10ee953f236db90cf30) |
 | KursPyth (Pyth IPyth: getPrice, updatePriceFeeds with Kurs bundles) | [`0x22cd6de783b69a2742a389c037dbe77999fabaa7`](https://sepolia.etherscan.io/address/0x22cd6de783b69a2742a389c037dbe77999fabaa7) |
 | KursMorphoOracle (Morpho Blue IOracle, BTC collateral / Rupiah loan token) | [`0xdcdc450ff50f0925e3b9ca5b83db92e7614026e5`](https://sepolia.etherscan.io/address/0xdcdc450ff50f0925e3b9ca5b83db92e7614026e5) |
+| KursDIA (DIA getValue) | [`0x77c993404504bc06e415273332fffcd36a8f42ec`](https://sepolia.etherscan.io/address/0x77c993404504bc06e415273332fffcd36a8f42ec) |
+| KursBand (Band IStdReference) | [`0xd3bc38c7ac048efeaf3d16e88a04810d96878fc0`](https://sepolia.etherscan.io/address/0xd3bc38c7ac048efeaf3d16e88a04810d96878fc0) |
+| KursApi3ReaderProxy BTC/USD (API3 read) | [`0x4642c5d754195847ae94b5ab7032a16c41ab5cd6`](https://sepolia.etherscan.io/address/0x4642c5d754195847ae94b5ab7032a16c41ab5cd6) |
+| KursApi3ReaderProxy USD/IDR | [`0x32559c5874d123cf5f173bf822ba7a1e83cf07e0`](https://sepolia.etherscan.io/address/0x32559c5874d123cf5f173bf822ba7a1e83cf07e0) |
+| KursChronicle BTC/USD (Chronicle read/readWithAge) | [`0x7135784d38e360c37980fc2cf2840212a07f938e`](https://sepolia.etherscan.io/address/0x7135784d38e360c37980fc2cf2840212a07f938e) |
+| KursAaveOracle (Aave v3 IPriceOracleGetter) | [`0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73`](https://sepolia.etherscan.io/address/0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73) |
 
 ### Governance: Safe 2-of-3 (Safe{Core} protocol-kit)
 
@@ -139,6 +145,10 @@ Reporters (quorum 3 of 5): [`0x5Fd0d3Ab…a21F05`](https://sepolia.etherscan.io/
 | AMZN/USD | [`0x23cfb56f…e0eae4`](https://sepolia.etherscan.io/address/0x23cfb56fbfc5ebdf4e538c2ff6fbbf143de0eae4) | 24563000000 |
 | META/USD | [`0x78ec9fda…08bd82`](https://sepolia.etherscan.io/address/0x78ec9fda671c924e48130eaeef2763679208bd82) | 60673000000 |
 | tPOT/pUSD | [`0x258a4423…cb3f39`](https://sepolia.etherscan.io/address/0x258a4423a14a4974fafb754b0eee0ee6decb3f39) | 71492700 |
+
+### DIA, Band, API3, Chronicle and Aave views (read live)
+
+Deployed and read by `reporter/scripts/deploy-compat.ts`; the full output, with block number and every returned value, is [`docs/compat-sepolia.txt`](compat-sepolia.txt). All six are Sourcify exact matches.
 
 ### Pyth and Morpho views (read live)
 
@@ -222,5 +232,11 @@ Sepolia contracts are verified on Sourcify with an exact match:
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x23cfb56fbfc5ebdf4e538c2ff6fbbf143de0eae4/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x78ec9fda671c924e48130eaeef2763679208bd82/
 - https://repo.sourcify.dev/contracts/full_match/11155111/0x258a4423a14a4974fafb754b0eee0ee6decb3f39/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0x77c993404504bc06e415273332fffcd36a8f42ec/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0xd3bc38c7ac048efeaf3d16e88a04810d96878fc0/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0x4642c5d754195847ae94b5ab7032a16c41ab5cd6/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0x32559c5874d123cf5f173bf822ba7a1e83cf07e0/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0x7135784d38e360c37980fc2cf2840212a07f938e/
+- https://repo.sourcify.dev/contracts/full_match/11155111/0x537c2d9059ceb8d9c8e1eb289fb07153d61d8f73/
 
 To check any deployment yourself: `cd contracts && forge build`, then compare `out/KursOracle.sol/KursOracle.json` deployedBytecode with `eth_getCode` at the oracle address (immutables differ only in DOMAIN_SEPARATOR).
