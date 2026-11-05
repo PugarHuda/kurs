@@ -117,6 +117,17 @@
             }
           }
         }
+      },
+      "head": {
+        "summary": "Same status as GET, no body (for uptime monitors)",
+        "responses": {
+          "200": {
+            "description": "every feed fresh"
+          },
+          "503": {
+            "description": "a feed is stale or unreadable"
+          }
+        }
       }
     },
     "/api/substrate": {
@@ -196,6 +207,9 @@
           },
           "502": {
             "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "description": "the pair is not configured on that network (e.g. GBP/USD on portaldot)"
           }
         }
       }

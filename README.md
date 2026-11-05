@@ -182,7 +182,7 @@ cd web && npm ci && npm run dev   # http://localhost:5173
 ```bash
 cp .env.example .env              # DEPLOYER_PK, REPORTER_1_PK .. REPORTER_5_PK
 cd reporter
-npx tsx src/cli.ts deploy portaldot        # oracle + factory + 11 feeds + clones
+npx tsx src/cli.ts deploy portaldot        # oracle + factory + every feed in feeds.ts + clones
 npx tsx src/cli.ts deploy sepolia          # same reporter set on Sepolia
 KURS_CHAINS=portaldot,sepolia npx tsx src/cli.ts run   # relay every round to both
 ```
@@ -205,7 +205,7 @@ It simulates `KursConverter.convert`, catches `OracleDataRequired`, fetches the 
 
 ### Hosted parts
 
-`bash scripts/set-secrets.sh` puts the testnet reporter keys on Vercel (for `/api/bundle`) and in GitHub Actions secrets (for `.github/workflows/relay.yml`, a push round every 10 minutes).
+`bash scripts/set-secrets.sh` puts the testnet reporter keys on Vercel (for `/api/bundle`) and in GitHub Actions secrets (for `.github/workflows/relay.yml`: an hourly run whose 57-minute loop checks every feed every 2 minutes).
 
 ### ink! consumer
 
@@ -284,7 +284,7 @@ What the tests cover: median of odd and even sets, a 2-of-5 lying minority canno
 
 On Portaldot V3, `KursOracle.owner()` is not a key: it is a **2-of-3 `pallet-multisig` account**. `reporter/scripts/multisig-owner.ts` did the handoff on chain: signer A funded the multisig account, the deployer called `transferOwnership(<multisig's Revive address>)`, then `multisig.asMulti` wrapped `utility.batchAll[revive.mapAccount, revive.call(acceptOwnership)]`, approved by A and executed by B. From now on, adding a feed, rotating reporters or moving ownership takes two Substrate signatures that reach the EVM contract through `revive.call`. The dashboard's "Who can change Kurs here" panel reads `owner()` live; the extrinsics are in [`docs/evidence.md`](docs/evidence.md).
 
-**Timelock.** The multisig then put a delay in front of itself, again with native pallets only (`reporter/scripts/timelock-owner.ts`): ownership moved to a **pure proxy** that the multisig controls through `pallet-proxy` with a **600-block delay (~140 min at ~14 s blocks)**. Every owner action is now announced by 2 of 3 signers (`proxy.announce`), can run only 600 blocks later (`proxy.proxyAnnounced`), and can be vetoed in between (`proxy.rejectAnnouncement`). Executing early was tried on chain and rejected (`proxy.Unannounced`); so was a single signer using the proxy directly (`proxy.NotProxy`). `owner()` now returns the pure proxy.
+**Timelock.** The multisig then put a delay in front of itself, again with native pallets only (`reporter/scripts/timelock-owner.ts`): ownership moved to a **pure proxy** that the multisig controls through `pallet-proxy` with a **600-block delay (~60 min at ~6 s blocks)**. Every owner action is now announced by 2 of 3 signers (`proxy.announce`), can run only 600 blocks later (`proxy.proxyAnnounced`), and can be vetoed in between (`proxy.rejectAnnouncement`). Executing early was tried on chain and rejected (`proxy.Unannounced`); so was a single signer using the proxy directly (`proxy.NotProxy`). `owner()` now returns the pure proxy.
 
 **The governance is used, not just installed.** `reporter/scripts/sync-feeds.ts` found that the equities' on-chain heartbeat (3600 s) no longer matched the relay's 4 h cadence on either chain, and fixed it through each owner: on Sepolia one Safe transaction (MultiSend of 5 `setFeed`, signed by 2 of 3 owners; the same batch is in [`docs/safe/sync-feeds-sepolia.json`](docs/safe/sync-feeds-sepolia.json) for the Safe{Wallet} Transaction Builder), on Portaldot a 2-of-3 `proxy.announce` of `utility.batchAll[revive.call(setFeed) x5]`, executed by `proxy.proxyAnnounced` only after the 600-block delay. Transactions in [`docs/evidence.md`](docs/evidence.md#governance-in-use-feed-config-sync).
 

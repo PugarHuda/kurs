@@ -9,7 +9,7 @@ const headers = { "content-type": "application/json", "access-control-allow-orig
 
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams;
-  const network = (q.get("network") ?? q.get("net") ?? "portaldot").toLowerCase() as Net;
+  const network = (q.get("network") ?? q.get("net") ?? q.get("chain") ?? "portaldot").toLowerCase() as Net;
   if (!Object.hasOwn(NETS, network)) return new Response(JSON.stringify({ error: `unknown network "${network}"`, networks: Object.keys(NETS) }), { status: 400, headers });
   const amount = Number(q.get("amount") ?? 1);
   const maxAge = q.get("maxAge");

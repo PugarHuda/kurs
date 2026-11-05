@@ -17,6 +17,7 @@ const NETS = {
   sepolia: { d: sepolia, rpc: "https://ethereum-sepolia-rpc.publicnode.com", chunk: 45_000n },
 } as const;
 
+const CORS = { "access-control-allow-origin": "*" }; // error bodies must be readable cross-origin too
 const MAX_CHUNKS = 20n;
 type Round = { roundId: string; answer: string; observedAt: string; signers: number; transmitter: string; block: number; tx: string };
 // ponytail: per-instance memory; a shared store (KV) if instances multiply
@@ -34,12 +35,13 @@ export async function GET(req: Request) {
   const net = (q.get("net") ?? q.get("network") ?? q.get("chain") ?? "portaldot").toLowerCase() as keyof typeof NETS;
   const feed = findFeed(u.searchParams.get("pair") ?? "USD/IDR");
   const rawLimit = Number(u.searchParams.get("limit") ?? 500);
-  if (!Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 5000) return Response.json({ error: "limit must be an integer 1..5000" }, { status: 400 });
+  if (!Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 5000) return Response.json({ error: "limit must be an integer 1..5000" }, { status: 400, headers: CORS });
   const limit = rawLimit;
   const n = Object.hasOwn(NETS, net) ? NETS[net] : undefined;
-  if (!n || !feed) return Response.json({ error: "unknown net or pair", nets: Object.keys(NETS), pairs: FEEDS.map((f) => f.pair) }, { status: 400 });
+  if (!n || !feed) return Response.json({ error: "unknown net or pair", nets: Object.keys(NETS), pairs: FEEDS.map((f) => f.pair) }, { status: 400, headers: CORS });
 
   const pair = feed.pair;
+  if (!(n.d.aggregators as Record<string, string>)[pair]) return Response.json({ error: `${pair} is not configured on ${net}` }, { status: 404, headers: CORS });
   const c = createPublicClient({ transport: transportFor(n.rpc, { retryCount: 2 }) });
   try {
     const key = `${net}|${pair}`;
@@ -93,6 +95,6 @@ export async function GET(req: Request) {
       { headers: { "cache-control": "s-maxage=60, stale-while-revalidate=120", "access-control-allow-origin": "*" } },
     );
   } catch (e) {
-    return Response.json({ error: (e as Error).message.split("\n")[0] }, { status: 502 });
+    return Response.json({ error: (e as Error).message.split("\n")[0] }, { status: 502, headers: CORS });
   }
 }

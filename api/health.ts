@@ -62,3 +62,9 @@ export async function GET() {
     headers: { "content-type": "application/json", "access-control-allow-origin": "*", "cache-control": "no-store" },
   });
 }
+
+/** Uptime monitors often probe with HEAD: same status as GET, no body. */
+export async function HEAD() {
+  const r = await GET();
+  return new Response(null, { status: r.status, headers: r.headers });
+}

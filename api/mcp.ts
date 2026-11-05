@@ -11,7 +11,9 @@ import { DOMAIN, TYPES } from "../reporter/src/eip712.js";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };
 import { NETS, convert, latest, pairs } from "../lib/quote.js";
-import { FEEDS } from "../reporter/src/feeds.js";
+import { FEEDS, findFeed } from "../reporter/src/feeds.js";
+// case-insensitive, "-" "_" "/" all accepted, like the REST endpoints
+const Pair = z.preprocess((v) => (typeof v === "string" ? findFeed(v)?.pair ?? v : v), z.enum(pairs));
 import { GET as historyGET } from "./history.js";
 import { GET as bundleGET } from "./bundle.js";
 
@@ -66,7 +68,7 @@ function server() {
 
   s.registerTool(
     "get_price",
-    { title: "Latest signed price", description: "Latest round of a feed read from the KursOracle contract: the median of the reporters' signed observations.", inputSchema: { pair: z.enum(pairs), network: Net } },
+    { title: "Latest signed price", description: "Latest round of a feed read from the KursOracle contract: the median of the reporters' signed observations.", inputSchema: { pair: Pair, network: Net } },
     async ({ pair, network }) => {
       try {
         return text(await latest(network, pair));
@@ -101,7 +103,7 @@ function server() {
 
   s.registerTool(
     "get_history",
-    { title: "Round history", description: "Past rounds of a feed rebuilt from RoundUpdated logs (newest first): price, signer count, block, transaction.", inputSchema: { pair: z.enum(pairs), network: Net, limit: z.number().int().min(1).max(200).default(20) } },
+    { title: "Round history", description: "Past rounds of a feed rebuilt from RoundUpdated logs (newest first): price, signer count, block, transaction.", inputSchema: { pair: Pair, network: Net, limit: z.number().int().min(1).max(200).default(20) } },
     async ({ pair, network, limit }) => {
       const r = await historyGET(new Request(`https://kurs.local/api/history?net=${network}&pair=${encodeURIComponent(pair)}&limit=${limit}`));
       const body = await r.json();
@@ -114,7 +116,7 @@ function server() {
     {
       title: "Signed bundle to pull on chain",
       description: "A fresh observation bundle signed by the Kurs reporters. Its payload goes to KursOracle.fulfillOracleQuery (ERC-7412) or KursPyth.updatePriceFeeds on any chain running Kurs.",
-      inputSchema: { pair: z.enum(pairs) },
+      inputSchema: { pair: Pair },
     },
     async ({ pair }) => {
       const r = await bundleGET(new Request(`https://kurs.local/api/bundle?pair=${encodeURIComponent(pair)}`));

@@ -495,7 +495,7 @@ async function renderGovernance(d: Deployment) {
     const g = d.governance;
     const tl = g?.timelock;
     if (g && tl?.pureH160 && owner.toLowerCase() === tl.pureH160.toLowerCase()) {
-      const minutes = Math.round((tl.delayBlocks * 14) / 60); // Portaldot V3 blocks are ~14 s
+      const minutes = Math.round((tl.delayBlocks * 6) / 60); // Portaldot V3 blocks are ~6 s (measured: 6,030 s per 1,000 blocks)
       el.innerHTML = `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is a pure proxy held by the <strong>native Portaldot ${g.threshold}-of-${g.signatories.length} multisig behind a ${tl.delayBlocks}-block (about ${minutes} min) timelock</strong>, built from pallet-proxy. Any change to feeds, reporters or ownership must be announced by ${g.threshold} Substrate signers and can only run ${tl.delayBlocks} blocks later; until then the multisig can veto it.</p>
         <p class="muted">Pure proxy <code>${esc(short(tl.pure ?? ""))}</code> (Revive <code>${esc(short(tl.pureH160))}</code>), controlled by multisig <code>${esc(short(g.account))}</code>.</p>`;
     } else if (g && owner.toLowerCase() === g.h160.toLowerCase()) {

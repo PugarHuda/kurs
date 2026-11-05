@@ -58,7 +58,7 @@ for (const d of deployments) {
     const block = (h) => `https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/${h}`;
     md += `\n### Governance: ${g.type}\n\n`;
     md += `\`owner()\` read live: \`${owner}\` ${isMs ? "**= the multisig account**" : "(not the multisig)"}. `;
-    md += `Changing feeds, reporters or ownership needs ${g.threshold} of ${g.signatories.length} Substrate signers: ${g.signatories.map((s) => `\`${s}\``).join(", ")}. `;
+    md += `Changing feeds, reporters or ownership needs ${g.threshold} of ${g.signatories.length} ${g.type.startsWith("pallet-multisig") ? "Substrate signers" : "Safe owners"}: ${g.signatories.map((s) => `\`${s}\``).join(", ")}. `;
     if (g.substrateTxs) {
       md += `Multisig account \`${g.account}\`, its Revive address \`${g.h160}\`.\n\n| Step | Extrinsic |\n|---|---|\n`;
       for (const [what, t] of Object.entries(g.substrateTxs)) md += `| ${what} | ${t.block ? `[\`${short(t.hash)}\`](${block(t.block)})` : `\`${short(t.hash)}\``} |\n`;
@@ -151,5 +151,5 @@ ${deployments
 To check any deployment yourself: \`cd contracts && forge build\`, then compare \`out/KursOracle.sol/KursOracle.json\` deployedBytecode with \`eth_getCode\` at the oracle address (immutables differ only in DOMAIN_SEPARATOR).
 `;
 
-writeFileSync("../docs/evidence.md", md);
+writeFileSync(process.env.EVIDENCE_OUT ?? "../docs/evidence.md", md);
 console.log("docs/evidence.md written");

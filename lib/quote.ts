@@ -18,6 +18,8 @@ export const pairs = FEEDS.map((f) => f.pair) as [string, ...string[]];
 export async function latest(net: Net, pair: string) {
   const n = NETS[net];
   const f = FEEDS.find((x) => x.pair === pair)!;
+  // a feed gets its AggregatorV3 clone when the owner configures it on that chain
+  if (!(n.d.aggregators as Record<string, string>)[pair]) throw new QuoteError(`${pair} is not configured on ${net} (served on: ${Object.keys(NETS).filter((k) => (NETS[k as Net].d.aggregators as Record<string, string>)[pair]).join(", ")})`, 404);
   const c = createPublicClient({ transport: transportFor(n.rpc, { retryCount: 2 }) });
   const [roundId, answer, observedAt, updatedAt] = await c.readContract({ address: n.d.oracle as Address, abi, functionName: "latestRound", args: [keccak256(toBytes(pair))] });
   if (roundId === 0n) throw new Error(`${pair} has no round on ${net} yet`);

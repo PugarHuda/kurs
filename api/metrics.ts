@@ -54,6 +54,7 @@ export async function GET() {
           FEEDS.map(async (f) => {
             try {
               const cfg = (await c.readContract({ address: oracle as Address, abi: kursOracleAbi, functionName: "feed", args: [keccak256(toBytes(f.pair))] })) as Record<string, unknown>;
+              if (!cfg.exists) return undefined; // deliberately not on this chain: not drift
               return [`chain="${chain}",pair="${esc(f.pair)}"`, KEYS.some((k) => cfg[k] !== f[k]) ? 1 : 0] as [string, number];
             } catch {
               return undefined;
@@ -78,7 +79,7 @@ export async function GET() {
   metric("kurs_feed_age_seconds", "Seconds since the latest round was written on chain", "gauge", rows((f) => f.ageSeconds));
   metric("kurs_feed_answer", "Latest round answer (signed median), in units of the quote asset", "gauge", rows((f) => f.answer));
   metric("kurs_feed_round_id", "Latest round id", "gauge", rows((f) => f.roundId));
-  metric("kurs_feed_up", "1 when the feed is within 2x its heartbeat", "gauge", rows((f) => (f.status === "ok" ? 1 : 0)));
+  metric("kurs_feed_up", "1 when the feed is within 2x its heartbeat", "gauge", rows((f) => (f.status === "not configured" ? undefined : f.status === "ok" ? 1 : 0)));
   metric("kurs_twap_1h", "KursTwap time-weighted average over the last hour", "gauge", twaps.map(([p, v]) => [`chain="sepolia",pair="${esc(p)}"`, v]));
   // latest answer vs the 1 h average, in basis points: a sudden jump shows here first
   const spot = (p: string) => h.networks.find((n: { chain: string }) => n.chain === "sepolia")?.feeds.find((f: Feed) => f.pair === p)?.answer;

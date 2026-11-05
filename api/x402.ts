@@ -64,6 +64,10 @@ export async function GET(request: Request) {
   } catch {
     return reply(402, { x402Version: 1, error: "X-PAYMENT is not base64 JSON", accepts: [req] });
   }
+  // an X-PAYMENT that is not an x402 payload is the payer's error (402), not the facilitator's
+  const p = payment as { x402Version?: unknown; scheme?: unknown; network?: unknown; payload?: unknown } | null;
+  if (!p || typeof p !== "object" || p.x402Version !== 1 || p.scheme !== "exact" || typeof p.payload !== "object")
+    return reply(402, { x402Version: 1, error: "X-PAYMENT is not an x402 v1 exact payment", accepts: [req] });
   try {
     const v = await facilitator("verify", payment, req);
     if (!v.isValid) return reply(402, { x402Version: 1, error: v.invalidReason ?? "payment invalid", accepts: [req] });

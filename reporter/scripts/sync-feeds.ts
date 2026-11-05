@@ -226,7 +226,7 @@ async function portaldot() {
   const executedPairs: string[] = [];
   for (const [name, o] of Object.entries(ops).filter(([, o]) => o.pending)) {
     if (now < o.announcedAt + DELAY) {
-      console.log(`${name} (${o.pairs.join(", ")}): executable from #${o.announcedAt + DELAY}, now #${now} (~${Math.ceil(((o.announcedAt + DELAY - now) * 14) / 60)} min at ~14 s blocks). Re-run then.`);
+      console.log(`${name} (${o.pairs.join(", ")}): executable from #${o.announcedAt + DELAY}, now #${now} (~${Math.ceil(((o.announcedAt + DELAY - now) * 6) / 60)} min at ~6 s blocks). Re-run then.`);
       continue;
     }
     const execTx = api.tx.proxy.proxyAnnounced(M, P, null, batchOf(o.datas, o.limit ?? 10));
