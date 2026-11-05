@@ -1,6 +1,7 @@
 // GET /api/metrics: Prometheus text exposition of the relay's state, for Grafana or any
 // scraper. Built from /api/health's own reads plus the relayer's gas balance per network.
 export { preflight as OPTIONS } from "../lib/http.js";
+import { transportFor } from "../lib/rpc.js";
 import { createPublicClient, http, formatEther, keccak256, toBytes, type Address } from "viem";
 import { GET as health } from "./health.js";
 import { kursOracleAbi, kursTwapAbi } from "../reporter/src/abi.js";
@@ -22,7 +23,7 @@ export async function GET() {
   const balances = await Promise.all(
     Object.entries(RPC).map(async ([chain, rpc]) => {
       try {
-        const c = createPublicClient({ transport: http(rpc, { retryCount: 2 }) });
+        const c = createPublicClient({ transport: transportFor(rpc, { retryCount: 2 }) });
         return [chain, formatEther(await c.getBalance({ address: RELAYER }))] as const;
       } catch {
         return [chain, null] as const;
@@ -30,7 +31,7 @@ export async function GET() {
     }),
   );
   // KursTwap 1 h averages on Sepolia (a window its history does not cover yet is left out)
-  const sc = createPublicClient({ transport: http(RPC.sepolia, { retryCount: 2 }) });
+  const sc = createPublicClient({ transport: transportFor(RPC.sepolia, { retryCount: 2 }) });
   const twaps = (
     await Promise.all(
       Object.entries((sepolia as { twap?: Record<string, string> }).twap ?? {}).map(async ([pair, address]) => {
@@ -48,7 +49,7 @@ export async function GET() {
   const drift = (
     await Promise.all(
       [["portaldot", portaldot.oracle], ["sepolia", sepolia.oracle]].map(async ([chain, oracle]) => {
-        const c = createPublicClient({ transport: http(RPC[chain], { batch: true, retryCount: 2 }) });
+        const c = createPublicClient({ transport: transportFor(RPC[chain], { batch: true, retryCount: 2 }) });
         return Promise.all(
           FEEDS.map(async (f) => {
             try {

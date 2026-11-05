@@ -1,5 +1,6 @@
 // On-chain reads and conversions shared by /api/mcp and /api/quote: every number is a
 // KursOracle round read live from the chain, with its age.
+import { transportFor } from "./rpc.js";
 import { createPublicClient, http, keccak256, parseAbi, toBytes, type Address } from "viem";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };
@@ -17,7 +18,7 @@ export const pairs = FEEDS.map((f) => f.pair) as [string, ...string[]];
 export async function latest(net: Net, pair: string) {
   const n = NETS[net];
   const f = FEEDS.find((x) => x.pair === pair)!;
-  const c = createPublicClient({ transport: http(n.rpc, { retryCount: 2 }) });
+  const c = createPublicClient({ transport: transportFor(n.rpc, { retryCount: 2 }) });
   const [roundId, answer, observedAt, updatedAt] = await c.readContract({ address: n.d.oracle as Address, abi, functionName: "latestRound", args: [keccak256(toBytes(pair))] });
   if (roundId === 0n) throw new Error(`${pair} has no round on ${net} yet`);
   const now = Math.floor(Date.now() / 1000);

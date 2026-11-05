@@ -1,0 +1,40 @@
+# Deploys the remaining Kurs adapters on Portaldot (live on Sepolia already) whenever the deployer
+# holds enough tPOT for the next one plus a relay reserve; see "Fund the rest" in the README.
+# The contract code is the frozen source in this repo; a run only adds addresses to
+# deployments/portaldot.json and the read-back to docs/*-portaldot.txt, committed as kurs-autodeploy.
+name: autodeploy
+on:
+  schedule:
+    - cron: "40 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: autodeploy
+  cancel-in-progress: false
+
+jobs:
+  autodeploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: reporter
+      - name: deploy what the balance covers
+        working-directory: reporter
+        run: npx tsx scripts/autodeploy.ts
+        env:
+          DEPLOYER_PK: ${{ secrets.DEPLOYER_PK }}
+      - name: record addresses
+        if: always()
+        run: |
+          git add deployments/portaldot.json docs
+          git diff --cached --quiet && exit 0
+          git -c user.name=kurs-autodeploy -c user.email=actions@users.noreply.github.com commit -m "autodeploy: Portaldot adapter addresses (frozen source, funded after the freeze)"
+          git push

@@ -1,4 +1,4 @@
-// Deploys the global-FX views of Kurs on Sepolia and reads each against the live oracle:
+// Deploys the global-FX views of Kurs on Sepolia or Portaldot and reads each against the live oracle:
 //   KursFeedRegistry   Chainlink Feed Registry: latestRoundData(base, quote) with Denominations
 //   KursQuoteOracle v3 ERC-7726 / Euler IPriceOracle over crypto, FX majors and gold (v2, BTC/ETH/IDR
 //                      only, stays live as quoteOracleV2: KursSiloOracle was built on it)
@@ -10,10 +10,11 @@ import * as A from "../src/abi.js";
 import { clients } from "../src/chain.js";
 
 process.loadEnvFile?.(new URL("../../.env", import.meta.url));
-const path = new URL("../../deployments/sepolia.json", import.meta.url);
+const chain = (process.argv[2] ?? "sepolia") as "sepolia" | "portaldot";
+const path = new URL(`../../deployments/${chain}.json`, import.meta.url);
 const j = JSON.parse(readFileSync(path, "utf8"));
 const save = () => writeFileSync(path, JSON.stringify(j, null, 2) + "\n");
-const { pub, wallet } = clients("sepolia", privateKeyToAccount(process.env.DEPLOYER_PK as Hex));
+const { pub, wallet } = clients(chain, privateKeyToAccount(process.env.DEPLOYER_PK as Hex));
 const fid = (p: string) => keccak256(toBytes(p));
 const iso = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as Address; // ISO 4217 numeric code
 const ETH = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as Address;
@@ -32,7 +33,7 @@ async function deploy(key: string, abi: any, bytecode: Hex, args: readonly unkno
 }
 
 // [base, quote, pair, base decimals, quote decimals] (ERC-7726: fiat and gold 18, BTC 8, ETH 18)
-const table: [Address, Address, string, number, number][] = [
+const table = ([
   [BTC, USD, "BTC/USD", 8, 18],
   [ETH, USD, "ETH/USD", 18, 18],
   [EUR, USD, "EUR/USD", 18, 18],
@@ -41,7 +42,7 @@ const table: [Address, Address, string, number, number][] = [
   [USD, JPY, "USD/JPY", 18, 18],
   [USD, CNY, "USD/CNY", 18, 18],
   [USD, IDR, "USD/IDR", 18, 18],
-];
+] as [Address, Address, string, number, number][]).filter((t) => j.aggregators[t[2]]); // only feeds this chain serves
 const registry = await deploy("feedRegistry", A.kursFeedRegistryAbi, A.kursFeedRegistryBytecode, [j.factory, table.map((t) => t[0]), table.map((t) => t[1]), table.map((t) => fid(t[2]))]);
 if (!j.quoteOracleV2 && j.quoteOracle) {
   j.quoteOracleV2 = j.quoteOracle;
@@ -57,7 +58,7 @@ const r = (address: Address, abi: any, functionName: string, args: unknown[] = [
     return d ? `revert ${d.errorName}(${(d.args ?? []).join(", ")})` : `revert: ${(e as Error).message.split("\n")[0]}`;
   }) as Promise<any>;
 const block = await pub.getBlock();
-console.log(`# Kurs global FX views on sepolia, read at block ${block.number} (${new Date(Number(block.timestamp) * 1000).toISOString()})`);
+console.log(`# Kurs global FX views on ${chain}, read at block ${block.number} (${new Date(Number(block.timestamp) * 1000).toISOString()})`);
 console.log(`oracle ${j.oracle}\n\nChainlink Feed Registry  KursFeedRegistry ${registry}`);
 for (const [b, q, pair] of table) {
   const [, answer, , updatedAt] = await r(registry, A.kursFeedRegistryAbi, "latestRoundData", [b, q]);

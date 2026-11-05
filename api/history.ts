@@ -6,6 +6,7 @@
 // reads new blocks, at most MAX_CHUNKS per request, so a request cannot fan out
 // into an unbounded number of RPC calls.
 export { preflight as OPTIONS } from "../lib/http.js";
+import { transportFor } from "../lib/rpc.js";
 import { createPublicClient, http, keccak256, parseAbiItem, toBytes, type Address, type Hex } from "viem";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
   if (!n || !feed) return Response.json({ error: "unknown net or pair", nets: Object.keys(NETS), pairs: FEEDS.map((f) => f.pair) }, { status: 400 });
 
   const pair = feed.pair;
-  const c = createPublicClient({ transport: http(n.rpc, { retryCount: 2 }) });
+  const c = createPublicClient({ transport: transportFor(n.rpc, { retryCount: 2 }) });
   try {
     const key = `${net}|${pair}`;
     let st = scanned.get(key);

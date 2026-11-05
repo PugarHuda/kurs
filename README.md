@@ -18,6 +18,30 @@ Portaldot Hacker House 2026 · Track: **Multi-Chain & Cross-Chain Infra**
 | Ethereum Sepolia | [`0xd3f6bf8e…a2cbc3`](https://sepolia.etherscan.io/address/0xd3f6bf8e595e815de11598f23170b37341a2cbc3) | live: 16 feeds (crypto, FX majors, gold, equities, tPOT) pushed by the relay, ERC-7412 pull used on chain, oracle + factory + converter verified on Sourcify (exact match) |
 | **Portaldot V3 testnet** | `0x5bdd9713ddc4f11e14bd3094882401cd122656f4` ([round in the Node Console](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/299579)) | **live: 13 feeds, rounds from 5 reporters every ~64 min, mirrored unchanged to Sepolia; EUR/USD and gold added through the owner's 600-block timelock (block #336815); ink! v6 KursRemit `0x26d22f75…3530` reads it cross-VM** (GBP, JPY, CNY stay on Sepolia: a new feed costs ~15.6 tPOT of Revive deposit on Portaldot) |
 
+### If a Portaldot feed looks stale: it is out of gas, and anyone can fix it
+
+Every Portaldot round costs the relay ~0.1 tPOT (~12 tPOT a day for 13 feeds). Testnet tPOT comes only from the [POT Starter Hub faucet](https://pot-starter-hub.vercel.app/hub) (10 tPOT per wallet per day), so the gas payer can run dry. [`topup.yml`](.github/workflows/topup.yml) claims the faucet for the relay's own keys every 6 hours whenever the deployer holds less than 100 tPOT, and the relay resumes by itself as soon as gas arrives. To refill it directly, send tPOT to the deployer (it only pays gas, it holds no admin rights):
+
+```
+5CjEvXjS5WV7yUmqVQKoT9n1mTZpLQMcVaovDQXan1HAqYTx    (native, any Polkadot wallet)
+0x1d63E7A1cC358Cb40Aa6073b7c44Fd3c916b2540          (EVM, same account)
+```
+
+Sepolia is unaffected (separate gas). `/api/health` and the dashboard show each feed's age, so a stale round is visible, never hidden.
+
+### Fund the rest: what more tPOT deploys automatically on Portaldot
+
+Already live on Portaldot: KursOracle, 13 Chainlink AggregatorV3 clones, KursConverter, KursDIA and the ink! v6 KursRemit. Everything below is live on Sepolia, and [`autodeploy.yml`](.github/workflows/autodeploy.yml) deploys it on Portaldot from the frozen source in this repo, in this order, within 6 hours of the deployer holding enough tPOT (cost + 100 tPOT kept for the relay). Each step reads its contracts back and commits the output to `docs/<step>-portaldot.txt`.
+
+| Step | Contracts | What it adds | ~tPOT |
+|---|---|---|---|
+| 1 | KursFeedRegistry, KursQuoteOracle | Chainlink Feed Registry `latestRoundData(base, quote)`; ERC-7726 / Euler `getQuote` for any cross rate (EUR→IDR, gold→EUR, BTC→IDR) | 560 |
+| 2 | KursBand, KursApi3, KursChronicle, KursAaveOracle | Band `getReferenceData`, API3 `read()`, Chronicle `read()`, Aave v3 `getAssetPrice`: protocols written for those oracles run unchanged | 870 |
+| 3 | KursPyth, KursMorphoOracle | Pyth `updatePriceFeeds` + `getPriceUnsafe`; Morpho Blue `price()` for a BTC-collateral, Rupiah-loan market | 375 |
+| | | **Total for everything** | **~1,805 + 100 reserve** |
+
+Plan and shortfall at any time: `cd reporter && npx tsx scripts/autodeploy.ts --plan`. Not planned for Portaldot: one KursAggregatorV2V3 per feed (~258 tPOT each; the V3 clones cover the same consumers for 45 bytes each).
+
 ![Kurs architecture](docs/architecture.png)
 
 ---

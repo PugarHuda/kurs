@@ -2,6 +2,7 @@
 // 200 when every feed with data is within 2x its heartbeat (Portaldot: the 64-minute
 // slot-aligned cadence), 503 otherwise, so any uptime monitor can watch the relay.
 export { preflight as OPTIONS } from "../lib/http.js";
+import { transportFor } from "../lib/rpc.js";
 import { createPublicClient, http, keccak256, toBytes, parseAbi, type Address, type Hex } from "viem";
 import portaldot from "../deployments/portaldot.json" with { type: "json" };
 import sepolia from "../deployments/sepolia.json" with { type: "json" };
@@ -18,7 +19,7 @@ export async function GET() {
   const now = Math.floor(Date.now() / 1000);
   const networks = await Promise.all(
     NETS.map(async ({ d, rpc, minHeartbeat }) => {
-      const c = createPublicClient({ transport: http(rpc, { batch: true, retryCount: 2 }) });
+      const c = createPublicClient({ transport: transportFor(rpc, { batch: true, retryCount: 2 }) });
       // feeds the owner has not configured on this chain yet (setFeed) are listed, not failures
       const configured = new Set(
         (await c.readContract({ address: d.oracle as Address, abi: feedIdsAbi, functionName: "feedIds" }).catch(() => [] as readonly Hex[])).map((x) => x.toLowerCase()),
