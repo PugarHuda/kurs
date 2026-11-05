@@ -495,7 +495,7 @@ async function renderGovernance(d: Deployment) {
     const g = d.governance;
     const tl = g?.timelock;
     if (g && tl?.pureH160 && owner.toLowerCase() === tl.pureH160.toLowerCase()) {
-      const minutes = Math.round((tl.delayBlocks * 6) / 60);
+      const minutes = Math.round((tl.delayBlocks * 14) / 60); // Portaldot V3 blocks are ~14 s
       el.innerHTML = `<p>On ${esc(NETWORKS[d.chain].label)} the oracle's <code>owner()</code> is a pure proxy held by the <strong>native Portaldot ${g.threshold}-of-${g.signatories.length} multisig behind a ${tl.delayBlocks}-block (about ${minutes} min) timelock</strong>, built from pallet-proxy. Any change to feeds, reporters or ownership must be announced by ${g.threshold} Substrate signers and can only run ${tl.delayBlocks} blocks later; until then the multisig can veto it.</p>
         <p class="muted">Pure proxy <code>${esc(short(tl.pure ?? ""))}</code> (Revive <code>${esc(short(tl.pureH160))}</code>), controlled by multisig <code>${esc(short(g.account))}</code>.</p>`;
     } else if (g && owner.toLowerCase() === g.h160.toLowerCase()) {
@@ -510,6 +510,23 @@ async function renderGovernance(d: Deployment) {
     }
   } catch (e) {
     el.innerHTML = `<p class="muted">Could not read the owner: ${esc((e as Error).message.split("\n")[0])}.</p>`;
+  }
+  if (d.chain === "portaldot") void renderGas(d, el);
+}
+
+const RELAYER = "0x1d63E7A1cC358Cb40Aa6073b7c44Fd3c916b2540" as Address; // pays relay gas, holds no rights
+const BURN_PER_HOUR = 0.5; // measured on Portaldot: ~0.105 tPOT per slot-aligned round, 13 feeds
+/** The relay's gas on Portaldot, read live: how long the feeds stay fresh without a refill. */
+async function renderGas(d: Deployment, el: HTMLElement) {
+  try {
+    const bal = Number(await clientFor(d).getBalance({ address: RELAYER })) / 1e18;
+    const hours = Math.floor(bal / BURN_PER_HOUR);
+    el.insertAdjacentHTML(
+      "beforeend",
+      `<p id="gas">Relay gas: the transmitter holds <strong>${bal.toFixed(1)} tPOT</strong>, about <strong>${hours < 48 ? `${hours} h` : `${Math.floor(hours / 24)} days`}</strong> of rounds at ~${BURN_PER_HOUR} tPOT/h. It only pays gas; a faucet top-up runs every 6 h below 100 tPOT, and anyone can send tPOT to <code>${esc(short(RELAYER))}</code> (<a href="https://github.com/PugarHuda/kurs#if-a-portaldot-feed-looks-stale-it-is-out-of-gas-and-anyone-can-fix-it" target="_blank" rel="noopener">how</a>).</p>`,
+    );
+  } catch {
+    /* informational only; the owner panel above already reports read failures */
   }
 }
 

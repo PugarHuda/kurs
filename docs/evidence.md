@@ -24,7 +24,7 @@ The same prices read through the Substrate runtime API `ReviveApi_call` (node We
 | approve (multisig.asMulti by A) | [`0xf2b94645…8ff9f2`](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0x9fcbc4ba10001f04cfaa1971749b6da509d6c768fbd4e02f9339bc119623caa4) |
 | execute batchAll[revive.mapAccount, revive.call(acceptOwnership)] (multisig.asMulti by B) | [`0x9c057bc8…33137a`](https://node-console.portaldot.dev/?rpc=wss%3A%2F%2Ftest-node-v3.portaldot.dev#/explorer/query/0xd5b2ab8d73aaa5d3ac07207d8ea3834398faec20f6ee8efb8863acac18e6050c) |
 
-#### Timelock: pallet-proxy delay of 600 blocks (~60 min)
+#### Timelock: pallet-proxy delay of 600 blocks (~140 min at ~14 s blocks)
 
 Ownership moves to pure proxy `5Dnq7UGyuhpLTrx9j4bZsSNqS7BKHWeFHe8nkmxHJdah4JMu` (Revive `0xae765c071001da195c77fc1089f45ab73518c8b5`), controlled by the multisig with a 600-block delay: every owner action is announced (2 of 3), can execute only after the delay, and can be vetoed with `proxy.rejectAnnouncement` meanwhile. Status: **active, `owner()` is the pure proxy**.
 

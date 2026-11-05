@@ -648,6 +648,30 @@
                       }
                     }
                   }
+                },
+                "relay": {
+                  "type": "object",
+                  "description": "The transmitter that pays relay gas (it holds no rights). On Portaldot its tPOT is the feeds' runway; refill instructions in the README.",
+                  "required": [
+                    "transmitter",
+                    "balance"
+                  ],
+                  "properties": {
+                    "transmitter": {
+                      "$ref": "#/components/schemas/Address"
+                    },
+                    "balance": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "native balance (tPOT or ETH)"
+                    },
+                    "runwayHours": {
+                      "type": "integer",
+                      "description": "Portaldot only: hours of rounds left at the measured ~0.5 tPOT/h"
+                    }
+                  }
                 }
               }
             }

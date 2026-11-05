@@ -105,6 +105,10 @@ test("Portaldot V3: live rounds, verified in the browser, linked to the Node Con
 test("governance panel reads the owner: native multisig on Portaldot, a Safe on Sepolia", async ({ page }) => {
   await page.goto("/?net=portaldot");
   await expect(page.locator("#gov")).toContainText("native Portaldot 2-of-3 multisig", { timeout: 45_000 });
+  await expect(page.locator("#gov")).toContainText("about 140 min"); // 600 blocks at ~14 s
+  // the relay's gas runway, read live, with the way to refill it
+  await expect(page.locator("#gas")).toContainText(/holds \d+\.\d tPOT, about \d+ (h|days)/, { timeout: 45_000 });
+  await expect(page.locator("#gas a")).toHaveAttribute("href", /#if-a-portaldot-feed-looks-stale/);
   await page.getByRole("button", { name: "Ethereum Sepolia" }).click();
   await expect(page.locator("#gov")).toContainText("2-of-3 Safe", { timeout: 45_000 });
 });

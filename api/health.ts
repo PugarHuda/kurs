@@ -10,6 +10,8 @@ import { FEEDS } from "../reporter/src/feeds.js";
 
 const abi = parseAbi(["function latestRound(bytes32) view returns (uint80, int192, uint64, uint64)"]);
 const feedIdsAbi = parseAbi(["function feedIds() view returns (bytes32[])"]);
+const RELAYER = "0x1d63E7A1cC358Cb40Aa6073b7c44Fd3c916b2540" as Address; // DEPLOYER_PK, pays relay gas
+const PORTALDOT_BURN_PER_HOUR = 0.5; // measured: ~0.105 tPOT per slot-aligned round across 13 feeds
 const NETS = [
   { d: portaldot, rpc: "https://test-evm-rpc-v3.portaldot.dev", minHeartbeat: 64 * 60 },
   { d: sepolia, rpc: "https://ethereum-sepolia-rpc.publicnode.com", minHeartbeat: 0 },
@@ -48,7 +50,10 @@ export async function GET() {
           }
         }),
       );
-      return { chain: d.chain, oracle: d.oracle, feeds };
+      // the transmitter only pays gas; on Portaldot its tPOT is the feeds' remaining runway
+      const gas = await c.getBalance({ address: RELAYER }).then((b) => Number(b) / 1e18).catch(() => null);
+      const relay = { transmitter: RELAYER, balance: gas, ...(d.chain === "portaldot" && gas !== null ? { runwayHours: Math.floor(gas / PORTALDOT_BURN_PER_HOUR) } : {}) };
+      return { chain: d.chain, oracle: d.oracle, relay, feeds };
     }),
   );
   const bad = networks.flatMap((n) => n.feeds.filter((f) => f.status === "stale" || f.status === "unreadable"));
