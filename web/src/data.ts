@@ -15,6 +15,8 @@ export interface Deployment {
   txs: Record<string, Hex>;
   /** KursConverter: ERC-7412 pull consumer for USD/IDR */
   converter?: Address;
+  /** KursRemit: ink! v6 (PolkaVM) contract that reads USD/IDR from KursOracle cross-VM */
+  kursRemit?: Address;
   /** KursTwap per pair (time-weighted average over the oracle's rounds) */
   twap?: Record<string, Address>;
   governance?: {

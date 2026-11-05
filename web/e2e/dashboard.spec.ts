@@ -109,6 +109,17 @@ test("governance panel reads the owner: native multisig on Portaldot, a Safe on 
   await expect(page.locator("#gov")).toContainText("2-of-3 Safe", { timeout: 45_000 });
 });
 
+test("the ink! KursRemit on Portaldot reads the Solidity oracle cross-VM, live in the browser", async ({ page }) => {
+  await page.goto("/?net=portaldot&feed=USD%2FIDR");
+  const ink = page.locator("#inkread");
+  await expect(ink).toContainText(/round \d+ = /, { timeout: 60_000 });
+  await expect(ink).toContainText(/identical to the round above|older round/);
+  const idr = Number((await ink.locator("strong").innerText()).replace(/[^0-9.]/g, ""));
+  expect(idr).toBeGreaterThan(10_000);
+  expect(idr).toBeLessThan(30_000);
+  await expect(ink.locator("code")).toContainText(/0x26d2/i); // Portaldot has no address explorer: shown as code
+});
+
 test("parity still lists both networks after switching to Sepolia", async ({ page }) => {
   await page.goto("/?net=portaldot&feed=USD%2FIDR");
   await expect(page.locator("#parity table")).toContainText("Ethereum Sepolia", { timeout: 60_000 });

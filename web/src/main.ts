@@ -1,6 +1,6 @@
 import "./style.css";
 import type { Address, Hex } from "viem";
-import { createWalletClient, custom, encodeFunctionData, keccak256, parseAbi, parseEventLogs, toBytes, type EIP1193Provider } from "viem";
+import { createWalletClient, custom, encodeFunctionData, hexToBytes, keccak256, parseAbi, parseEventLogs, toBytes, type EIP1193Provider } from "viem";
 import { sepolia as sepoliaChain } from "viem/chains";
 import { FEEDS, findFeed } from "../../reporter/src/feeds";
 import { FEEDS as ALL_FEEDS } from "../../reporter/src/feeds";
@@ -198,6 +198,7 @@ function renderDetail(s: Snapshot) {
     <h2>${esc(f.feed.description)}</h2>
     <p class="lede">${f.roundId > 0n ? `Round ${f.roundId} settled at <strong>${fmt(f.answer, f.feed.decimals)}</strong>.` : "No round on this network yet."}</p>
     ${d.twap?.[f.feed.pair] ? `<p id="twap" class="twap" aria-live="polite">Reading the time-weighted average…</p>` : ""}
+    ${d.kursRemit && f.feed.pair === "USD/IDR" ? `<p id="inkread" class="twap" aria-live="polite">Asking the ink! contract for this round…</p>` : ""}
     ${spark(f)}
     <ol class="steps">
       <li>
@@ -229,6 +230,25 @@ function renderDetail(s: Snapshot) {
   renderParity(f);
   if (ev) void runVerify(s, f, ev);
   if (d.twap?.[f.feed.pair]) void renderTwap(d, f);
+  if (d.kursRemit && f.feed.pair === "USD/IDR") void renderInk(d, f);
+}
+
+/** KursRemit (ink! v6, PolkaVM) reads the Solidity oracle; show its answer next to the oracle's own round. */
+async function renderInk(d: Deployment, f: FeedState) {
+  const el = () => (selected === f.feed.pair && current?.chain === d.chain ? document.querySelector<HTMLElement>("#inkread") : null);
+  try {
+    // latest() -> Result<(u128 round, i128 answer, u64, u64), LangError>: 0x00 then little-endian words
+    const { data } = await clientFor(d).call({ to: d.kursRemit!, data: "0x46d8a35e" });
+    const b = hexToBytes(data ?? "0x");
+    if (b[0] !== 0) throw new Error(`ink! returned an error (${data})`);
+    const le = (from: number, n: number) => b.slice(from, from + n).reduceRight((acc, x) => (acc << 8n) | BigInt(x), 0n);
+    const [round, answer] = [le(1, 16), le(17, 16)];
+    const same = round === f.roundId && answer === f.answer;
+    if (el())
+      el()!.innerHTML = `ink! v6 contract ${link(d, "addr", d.kursRemit!)} (KursRemit, PolkaVM) read this oracle cross-VM: round ${round} = <strong>${fmt(answer, f.feed.decimals)}</strong>, ${same ? "identical to the round above" : "an older round than the board's (it reads on demand)"}.`;
+  } catch (e) {
+    if (el()) el()!.textContent = `Could not read KursRemit: ${(e as Error).message.split("\n")[0]}`;
+  }
 }
 
 /** 1 h and 10 min averages from KursTwap, next to the latest round; the longest window its history covers. */
