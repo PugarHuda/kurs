@@ -7,7 +7,7 @@ import { createWalletClient, createPublicClient, formatEther, formatUnits, http,
 import { privateKeyToAccount } from "viem/accounts";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 
-process.loadEnvFile?.(new URL("../../.env", import.meta.url));
+try { process.loadEnvFile?.(new URL("../../.env", import.meta.url)); } catch {} // CI passes the keys as env
 const RPC = "https://test-evm-rpc-v3.portaldot.dev";
 const deployer = privateKeyToAccount(process.env.DEPLOYER_PK as Hex);
 const DEPLOYER_SS58 = "5CjEvXjS5WV7yUmqVQKoT9n1mTZpLQMcVaovDQXan1HAqYTx";

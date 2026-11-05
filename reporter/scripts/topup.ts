@@ -6,7 +6,7 @@ import { createPublicClient, formatEther, http, parseEther, type Hex } from "vie
 import { privateKeyToAccount } from "viem/accounts";
 import { encodeAddress, cryptoWaitReady } from "@polkadot/util-crypto";
 
-process.loadEnvFile?.(new URL("../../.env", import.meta.url));
+try { process.loadEnvFile?.(new URL("../../.env", import.meta.url)); } catch {} // CI passes the keys as env
 const FAUCET = "https://pot-starter-hub.vercel.app/api/faucet";
 const below = parseEther(process.env.TOPUP_BELOW ?? "100");
 const pub = createPublicClient({ transport: http("https://test-evm-rpc-v3.portaldot.dev") });
