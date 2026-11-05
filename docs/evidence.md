@@ -177,7 +177,10 @@ EUR/USD, GBP/USD, USD/JPY, USD/CNY and XAU/USD were added to `feeds.ts` and conf
 | Portaldot | multisig approve + execute of `proxy.announce` (5 `setFeed`), announced at #321950 | `0x953cfc5c084782336b92be3322358bffad66fed5dacca6c350ab3e770c357c3d`, `0x844f02a61fcd283cb3f60fb734065d26950ec62dcb63089f74bdb3564e0f5e01` |
 | Portaldot | `proxy.proxyAnnounced` after the delay: the timelock released it, and the proxied batch reverted `revive.StorageDepositNotEnoughFunds` (the owner proxy held 46.7 tPOT; five new feeds need ~78, 15.6 each). Nothing changed on chain | |
 | Portaldot | re-announced with EUR/USD and XAU/USD only, at #322584, executable from #323184 | `0x3c401652e36375b14bdcec960ec7527f24a79c885b04107c92f69791be26c54d`, `0x4ca54a21b98048ca1c01f8d5579aa6858bc519cf925aa311b6174e3230d536d3` |
-| Portaldot | `proxy.proxyAnnounced` after the delay | PORTALDOT_FX_EXEC_PENDING |
+| Portaldot | `proxy.proxyAnnounced` after the delay: EUR/USD and XAU/USD configured (block #336815) | `0xf2e37ffedc4a9b8c2008c4e340418cedfbd899a366919b9489da35225e40ff8e` |
+| Portaldot | AggregatorV3 clones (permissionless `factory.deploy`): EUR/USD `0x604C0f66b87F5C5A1818fBA9E58C934322117b6C`, XAU/USD `0xe2fabb4F4c57646DfFe0d667A1D7606Cb716A547` | `0xfa62fe806fb71039d644a24e880311580f7f471dafd8abea6081ead68adc6ded`, `0x96876252c6c47e7a2b0f532baf4d2d5fcab5a046ed3d19ddd5f8c66ecba5c6d6` |
+
+GBP/USD, USD/JPY and USD/CNY stay Sepolia-only: a script run also announced them at #336814, and that announcement is deliberately left unexecuted (it would cost the owner proxy ~47 tPOT of Revive deposit plus clones and first rounds).
 
 The existing adapters serve them with no new contract. Read live on Sepolia: Band `getReferenceData("EUR","JPY")` = 178.1516 (EUR/USD x USD/JPY), `("XAU","EUR")` = 3,589.94, `("GBP","CNY")` = 8.9897; DIA `getValue("XAU/USD")` = 4,037.60.
 

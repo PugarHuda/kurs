@@ -158,7 +158,9 @@ async function portaldot() {
   const covered = new Set(pending.flatMap(([, o]) => o.pairs as string[]));
   // --only EUR/USD,XAU/USD: announce just these (each new feed costs the proxy ~15.6 tPOT of Revive deposit)
   const only = process.argv.includes("--only") ? new Set(process.argv[process.argv.indexOf("--only") + 1].split(",")) : undefined;
-  const fresh = todo.filter((x) => !covered.has(x.f.pair) && (!only || only.has(x.f.pair)));
+  // ponytail: announcing costs the multisig a deposit and the proxy ~15.6 tPOT per new feed, so it is opt-in
+  const fresh = only ? todo.filter((x) => !covered.has(x.f.pair) && only.has(x.f.pair)) : [];
+  for (const x of todo.filter((x) => !covered.has(x.f.pair) && !fresh.includes(x))) console.log(`portaldot ${x.f.pair}: not announced (pass --only ${x.f.pair} to announce it)`);
   if (CHECK || (!fresh.length && !pending.length)) return;
   const d = loadDeployment("portaldot")!;
   const UNIT = 10n ** 14n;
@@ -238,7 +240,7 @@ async function portaldot() {
     console.log(`${name}: executed after the delay, proxy.proxyAnnounced ${r.hash} (block #${o.executedAt})`);
   }
   await api.disconnect();
-  if (!executedPairs.length) return;
+  if (!executedPairs.length) return clones("portaldot"); // retry any clone a previous run did not finish
   // only the pairs just executed must match now (others may be deliberately not on this chain)
   const left = (await drift("portaldot")).filter((x) => executedPairs.includes(x.f.pair));
   if (left.length) throw new Error(`Portaldot still differs after execution: ${left.map((x) => x.f.pair).join(", ")}`);
