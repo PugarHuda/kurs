@@ -11,6 +11,7 @@ import {KursBand} from "../src/KursBand.sol";
 import {KursApi3ReaderProxy} from "../src/KursApi3.sol";
 import {KursChronicle} from "../src/KursChronicle.sol";
 import {KursAaveOracle} from "../src/KursAaveOracle.sol";
+import {KursPortixOracle} from "../src/KursPortixOracle.sol";
 import {KursSiloOracle, IQuote} from "../src/KursSiloOracle.sol";
 import {KursTwap} from "../src/KursTwap.sol";
 import {KursTwapKeeper} from "../src/KursTwapKeeper.sol";
@@ -236,6 +237,33 @@ contract KursAdaptersTest is Test {
         assertEq(v, 76_000e18);
         assertEq(age, block.timestamp - 5);
         assertEq(c.decimals(), 18);
+    }
+
+    // ------------------------------------------------------------------ Portix (Portaldot Hacker House lending market)
+
+    function test_portixPrices() public {
+        bytes32 fTsla = keccak256("TSLA/USD");
+        oracle.setFeed(fTsla, "TSLA / USD", 8, 3600, 100, 1e8, 100_000e8);
+        address tsla = address(0x75A);
+        address[] memory t = new address[](1);
+        bytes32[] memory f = new bytes32[](1);
+        (t[0], f[0]) = (tsla, fTsla);
+        KursPortixOracle px = new KursPortixOracle(oracle, 3600, t, f);
+        vm.expectRevert(abi.encodeWithSelector(KursPortixOracle.OraclePriceZero.selector, tsla)); // no round yet
+        px.getPriceUSD(tsla);
+        _push(fTsla, 341_505e5); // $341.505
+        (uint256 price, uint8 dec, uint256 at) = px.getPrice(tsla);
+        assertEq(price, 341_505e5);
+        assertEq(dec, 8);
+        assertEq(at, block.timestamp);
+        assertEq(px.getPriceUSD(tsla), 341_505_000); // pUSDC scale: 1 USD = 1e6
+        vm.expectRevert(abi.encodeWithSelector(KursPortixOracle.TokenNotSupported.selector, address(0xDEAD)));
+        px.getPriceUSD(address(0xDEAD));
+        vm.warp(block.timestamp + 3601);
+        vm.expectRevert(abi.encodeWithSelector(KursPortixOracle.OraclePriceStale.selector, tsla, at, 3600));
+        px.getPriceUSD(tsla);
+        (price,,) = px.getPrice(tsla); // the raw read stays available, as in Portix's own oracle
+        assertEq(price, 341_505e5);
     }
 
     // ------------------------------------------------------------------ Aave
