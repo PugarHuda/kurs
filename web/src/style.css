@@ -631,6 +631,7 @@ td.bad {
 .verify {
   margin-top: 1rem;
   font-size: 0.9rem;
+  overflow-x: auto; /* the signatures table scrolls inside itself on a 320 px screen */
 }
 
 .verify p,
@@ -649,6 +650,7 @@ table.sigs td:first-child {
 }
 
 .convert-result {
+  overflow-wrap: anywhere;
   font-size: 1.25rem;
   margin: 0 0 0.3rem;
   overflow-wrap: anywhere;

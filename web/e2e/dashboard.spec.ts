@@ -113,6 +113,34 @@ test("governance panel reads the owner: native multisig on Portaldot, a Safe on 
   await expect(page.locator("#gov")).toContainText("2-of-3 Safe", { timeout: 45_000 });
 });
 
+test("rapid network switching never shows the network the user left", async ({ page }) => {
+  await page.goto("/?net=portaldot&feed=USD%2FIDR");
+  await expect(page.locator("#board-meta")).toContainText("Portaldot", { timeout: 60_000 });
+  // slow Sepolia down so its reply lands after the user is back on Portaldot
+  await page.route(/sepolia/, async (r) => (await new Promise((res) => setTimeout(res, 5000)), r.continue().catch(() => {})));
+  await page.getByRole("button", { name: "Ethereum Sepolia" }).click();
+  await page.getByRole("button", { name: /Portaldot/ }).click();
+  await page.waitForTimeout(9000);
+  await expect(page.locator("#board-meta")).toContainText("Portaldot");
+  await expect(page.locator("#networks button[data-net=portaldot]")).toBeFocused();
+});
+
+test("a Sepolia-only feed is not compared against an empty Portaldot round; huge conversions are refused", async ({ page }) => {
+  await page.goto("/?net=sepolia&feed=GBP%2FUSD");
+  await expect(page.locator("#detail h2")).toContainText("GBP", { timeout: 60_000 });
+  await expect(page.locator("#parity")).not.toContainText("0.000000", { timeout: 30_000 });
+  await page.locator("#convert-amount").fill("1e308");
+  await expect(page.locator("#convert-out")).toContainText("Enter an amount between");
+  await expect(page.locator("#convert-out")).not.toContainText("∞");
+});
+
+test("no horizontal scroll at 320 px, even with the signatures table open", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("/?net=sepolia&feed=BTC%2FUSD");
+  await expect(page.locator("#verify table")).toBeVisible({ timeout: 90_000 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+});
+
 test("the ink! KursRemit on Portaldot reads the Solidity oracle cross-VM, live in the browser", async ({ page }) => {
   await page.goto("/?net=portaldot&feed=USD%2FIDR");
   const ink = page.locator("#inkread");

@@ -115,6 +115,8 @@ function groupOf(f: FeedState["feed"]) {
 
 function renderBoard(s: Snapshot) {
   const groups = ["Crypto", "FX", "Metals", "Equities", "Portaldot native"];
+  // the board is rebuilt on every refresh: put keyboard focus back on the same row
+  const focused = (document.activeElement as HTMLElement | null)?.closest?.<HTMLTableRowElement>("#board-body tr[data-pair]")?.dataset.pair;
   $("#board-body").innerHTML = groups
     .map((g) => {
       const fs = s.feeds.filter((f) => groupOf(f.feed) === g);
@@ -130,8 +132,9 @@ function renderBoard(s: Snapshot) {
       renderDetail(s);
     };
     tr.addEventListener("click", pick);
-    tr.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick()));
+    tr.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick(), document.querySelector<HTMLElement>(`#board-body tr[data-pair="${CSS.escape(selected)}"]`)?.focus()));
   }
+  if (focused) document.querySelector<HTMLElement>(`#board-body tr[data-pair="${CSS.escape(focused)}"]`)?.focus();
 }
 
 // ------------------------------------------------------------------ detail
@@ -196,7 +199,7 @@ function renderDetail(s: Snapshot) {
 
   $("#detail").innerHTML = `
     <h2>${esc(f.feed.description)}</h2>
-    <p class="lede">${f.roundId > 0n ? `Round ${f.roundId} settled at <strong>${fmt(f.answer, f.feed.decimals)}</strong>.` : "No round on this network yet."}</p>
+    <p class="lede">${f.roundId > 0n ? `Round ${f.roundId} settled at <strong>${fmt(f.answer, f.feed.decimals)}</strong>.` : f.configured === false ? "Not on this network: its owner has not configured this feed here." : "No round on this network yet."}</p>
     ${d.twap?.[f.feed.pair] ? `<p id="twap" class="twap" aria-live="polite">Reading the time-weighted average…</p>` : ""}
     ${d.kursRemit && f.feed.pair === "USD/IDR" ? `<p id="inkread" class="twap" aria-live="polite">Asking the ink! contract for this round…</p>` : ""}
     ${spark(f)}
@@ -410,7 +413,8 @@ function renderParity(f: FeedState) {
       const st = s?.feeds.find((x) => x.feed.pair === f.feed.pair);
       return { d, st };
     })
-    .filter((r) => r.st);
+    // a network that does not serve the feed has nothing to compare
+    .filter((r) => r.st && r.st.configured !== false && r.st.roundId > 0n);
   if (rows.length < 2) {
     $("#parity").innerHTML = `<p class="muted">Kurs is deployed on one network so far. Run <code>kurs once</code> with <code>KURS_CHAINS=portaldot,sepolia</code> to relay the same signed rounds to Sepolia.</p>`;
     return;
@@ -492,6 +496,7 @@ async function renderGovernance(d: Deployment) {
   if (!el) return;
   try {
     const owner = await ownerOf(d);
+    if (current?.chain !== d.chain) return; // a late read must not overwrite the other network's panel
     const g = d.governance;
     const tl = g?.timelock;
     if (g && tl?.pureH160 && owner.toLowerCase() === tl.pureH160.toLowerCase()) {
@@ -520,6 +525,8 @@ const BURN_PER_HOUR = 0.5; // measured on Portaldot: ~0.105 tPOT per slot-aligne
 async function renderGas(d: Deployment, el: HTMLElement) {
   try {
     const bal = Number(await clientFor(d).getBalance({ address: RELAYER })) / 1e18;
+    if (current?.chain !== d.chain) return; // switched away meanwhile
+    document.querySelector("#gas")?.remove(); // one line, even when refreshes overlap
     const hours = Math.floor(bal / BURN_PER_HOUR);
     el.insertAdjacentHTML(
       "beforeend",
@@ -574,6 +581,7 @@ function renderConvert() {
   const p = convertPath(last, from.value, to.value);
   if (!p) return void (out.innerHTML = `<p class="bad-text">No Kurs path from ${esc(from.value)} to ${esc(to.value)} on ${esc(NETWORKS[last.deployment.chain].label)}: Kurs does not invent a cross rate it has no feeds for.</p>`);
   const result = n * p.rate;
+  if (!Number.isFinite(result) || n < 1e-12 || n > 1e15) return void (out.innerHTML = `<p class="muted">Enter an amount between 0.000000000001 and 1e15.</p>`);
   const now = Date.now() / 1000;
   const shown = (x: number) => x.toLocaleString("en-US", { maximumSignificantDigits: x >= 1 ? 12 : 6 });
   out.innerHTML = `<p class="convert-result"><strong>${shown(n)} ${esc(from.value)} = ${shown(result)} ${esc(to.value)}</strong></p>
@@ -582,16 +590,20 @@ function renderConvert() {
 
 async function refresh() {
   if (!current) return;
+  const d = current;
   try {
-    last = await snapshot(current);
-    others.set(current.chain, last); // kept for parity after the user switches network
+    const s = await snapshot(d);
+    if (d !== current) return; // the user switched network meanwhile: drop the late reply
+    last = s;
+    others.set(d.chain, last); // kept for parity after the user switches network
     renderBoard(last);
     renderDetail(last);
     renderConvert();
     void renderGovernance(current);
     $("#status").textContent = "";
   } catch (e) {
-    $("#status").textContent = `Could not reach ${NETWORKS[current.chain].label}: ${(e as Error).message.split("\n")[0]}. Retrying.`;
+    if (d !== current) return;
+    $("#status").textContent = `Could not reach ${NETWORKS[d.chain].label}: ${(e as Error).message.split("\n")[0].replace(/\.$/, "")}. Retrying.`;
   }
 }
 
@@ -617,6 +629,7 @@ function renderNetworks() {
       current = deployments.find((d) => d.chain === b.dataset.net);
       history.replaceState(null, "", `?net=${current!.chain}&feed=${encodeURIComponent(selected)}`);
       renderNetworks();
+      document.querySelector<HTMLButtonElement>(`#networks button[data-net="${current!.chain}"]`)?.focus(); // keep keyboard focus
       void refresh();
     });
   }
