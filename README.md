@@ -1,3 +1,5 @@
+<img src="docs/brand/logo.svg" alt="Kurs logo" width="88" align="right" />
+
 # Kurs
 
 [![ci](https://github.com/PugarHuda/kurs/actions/workflows/ci.yml/badge.svg)](https://github.com/PugarHuda/kurs/actions/workflows/ci.yml)

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Kurs">
+  <title>Kurs</title>
+  <rect width="64" height="64" rx="14" fill="#13233A"/>
+  <!-- five reporters; the median (middle) is the one that counts -->
+  <g fill="#B09460"><circle cx="20" cy="9.5" r="1.9"/><circle cx="26" cy="9.5" r="1.9"/><circle cx="38" cy="9.5" r="1.9"/><circle cx="44" cy="9.5" r="1.9"/></g>
+  <circle cx="32" cy="9.5" r="2.6" fill="#FFB000"/>
+  <!-- one split-flap tile, as on a money changer's rate board -->
+  <rect x="11" y="16" width="42" height="41" rx="6" fill="#1F3757"/>
+  <g fill="#FFB000">
+    <rect x="20" y="22" width="7.5" height="29" rx="1"/>
+    <polygon points="27.5,33 38,22 47,22 33.5,36.5"/>
+    <polygon points="32,34 47,51 38,51 27.5,39.5"/>
+  </g>
+  <!-- the flap line -->
+  <rect x="11" y="35.6" width="42" height="1.8" fill="#13233A"/>
+  <circle cx="11" cy="36.5" r="2" fill="#13233A"/><circle cx="53" cy="36.5" r="2" fill="#13233A"/>
+</svg>
