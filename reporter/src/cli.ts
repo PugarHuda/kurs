@@ -97,13 +97,18 @@ async function tick() {
   const chains = chainsFromEnv().sort((a, b) => Number(!!SLOT_ALIGNED[b]) - Number(!!SLOT_ALIGNED[a]));
   const mirrored: SignedObservation[][] = [];
   for (const chain of chains) {
-    // mirror first: if this chain took its own newer round first, the identical
-    // bundle from the slot-aligned chain would be rejected as stale
-    if (!SLOT_ALIGNED[chain] && mirrored.length) (await relayExact(chain, deployer(), mirrored)).forEach(print);
-    const res = await transmit(chain, deployer(), obs, FEEDS, { resign });
-    res.forEach(print);
-    if (SLOT_ALIGNED[chain]) mirrored.push(...res.flatMap((r) => (r.bundle ? [r.bundle] : [])));
-    (await pokeTwaps(chain, deployer())).forEach((l) => console.log(l));
+    // one chain's outage (RPC down, out of gas) must not stall the others
+    try {
+      // mirror first: if this chain took its own newer round first, the identical
+      // bundle from the slot-aligned chain would be rejected as stale
+      if (!SLOT_ALIGNED[chain] && mirrored.length) (await relayExact(chain, deployer(), mirrored)).forEach(print);
+      const res = await transmit(chain, deployer(), obs, FEEDS, { resign });
+      res.forEach(print);
+      if (SLOT_ALIGNED[chain]) mirrored.push(...res.flatMap((r) => (r.bundle ? [r.bundle] : [])));
+      (await pokeTwaps(chain, deployer())).forEach((l) => console.log(l));
+    } catch (e) {
+      console.error(`${chain}: tick failed, other chains continue:`, (e as Error).message.split("\n")[0]);
+    }
   }
 }
 

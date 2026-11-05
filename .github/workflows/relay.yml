@@ -46,4 +46,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         # the concurrency group holds it until this run ends; extra pending runs are dropped
-        run: gh workflow run relay.yml --ref main
+        # retried: after 60 days without commits GitHub disables cron, and this dispatch is then the only link
+        run: |
+          [ "${{ job.status }}" = "success" ] || sleep 300 # a crashing relay must not loop every minute
+          for i in 1 2 3 4 5; do gh workflow run relay.yml --ref main && exit 0; sleep 30; done
+          exit 1

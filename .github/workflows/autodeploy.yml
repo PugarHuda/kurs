@@ -37,4 +37,12 @@ jobs:
           git add deployments/portaldot.json docs
           git diff --cached --quiet && exit 0
           git -c user.name=kurs-autodeploy -c user.email=actions@users.noreply.github.com commit -m "autodeploy: Portaldot adapter addresses (frozen source, funded after the freeze)"
-          git push
+          # a rejected push would lose the addresses and the next run would pay for the deploy again
+          for i in 1 2 3 4 5; do git pull --rebase -q && git push && exit 0; sleep 15; done
+          exit 1
+      - name: keep the addresses even if the push failed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portaldot-deployments
+          path: deployments/portaldot.json

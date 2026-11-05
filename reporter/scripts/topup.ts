@@ -24,7 +24,9 @@ const start = await Promise.all(evm.map((a) => pub.getBalance({ address: a })));
 let claimed = 0;
 for (const [i, a] of evm.entries()) {
   const ss58 = native(a);
-  const el = await (await fetch(`${FAUCET}/eligibility/${ss58}`)).json();
+  const el = await fetch(`${FAUCET}/eligibility/${ss58}`, { signal: AbortSignal.timeout(20_000) })
+    .then((r) => r.json())
+    .catch((e: Error) => ({ eligible: false, reason: `faucet unreachable (${e.name})` }));
   if (!el.eligible) { console.log(`${keys[i]}: ${el.reason}`); continue; }
   // ponytail: one claim at a time, the faucet backend settles each on chain (~10-60 s)
   const r = await fetch(`${FAUCET}/claim`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ walletAddress: ss58 }), signal: AbortSignal.timeout(180_000) }).catch((e) => e as Error);

@@ -24,11 +24,20 @@ for (const k of ["REPORTER_1_PK", "REPORTER_2_PK", "REPORTER_3_PK", "REPORTER_4_
   const gasPrice = await pub.getGasPrice();
   const gas = await pub.estimateGas({ account: acct, to: deployer.address, value: parseEther("0.5") });
   const value = bal - gas * gasPrice * 3n - parseEther("0.1"); // ponytail: fee margin + dust left behind
-  const hash = await wallet.sendTransaction({ to: deployer.address, value, gas: gas * 2n, gasPrice });
-  await pub.waitForTransactionReceipt({ hash });
-  console.log(`${k}: sent ${formatEther(value)} tx ${hash}`);
+  try {
+    const hash = await wallet.sendTransaction({ to: deployer.address, value, gas: gas * 2n, gasPrice });
+    await pub.waitForTransactionReceipt({ hash });
+    console.log(`${k}: sent ${formatEther(value)} tx ${hash}`);
+  } catch (e) {
+    console.log(`${k}: skipped, ${(e as Error).message.split("\n")[0]}`); // the other keys still sweep
+  }
 }
 
+// CI has no multisig keys: skip the WebSocket entirely (a down node would hang the job)
+if (!["A", "B", "C"].some((k) => process.env[`SIGNER_${k}_MNEMONIC`])) {
+  console.log(`deployer ${formatEther(before)} -> ${formatEther(await pub.getBalance({ address: deployer.address }))} tPOT`);
+  process.exit(0);
+}
 await cryptoWaitReady();
 const api = await ApiPromise.create({ provider: new WsProvider("wss://test-node-v3.portaldot.dev"), noInitWarn: true });
 const kr = new Keyring({ type: "sr25519", ss58Format: 42 });

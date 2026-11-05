@@ -37,5 +37,6 @@ jobs:
         working-directory: reporter
         run: npx tsx scripts/topup.ts
       - name: forward reporter balances to the deployer
+        if: always()
         working-directory: reporter
         run: npx tsx scripts/sweep.ts

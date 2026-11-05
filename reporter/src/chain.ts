@@ -288,12 +288,13 @@ export async function transmit(
     const mid = sorted.length >> 1;
     const answer = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2n;
 
-    const [latestId, last, , updatedAt] = await pub.readContract({
-      address: d.oracle,
-      abi: kursOracleAbi,
-      functionName: "latestRound",
-      args: [id],
-    });
+    // a failed read skips this feed only, not every feed after it
+    const lr = await pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "latestRound", args: [id] }).catch((e: Error) => e);
+    if (lr instanceof Error) {
+      results.push({ ...base, error: `latestRound: ${lr.message.split("\n")[0]}` });
+      continue;
+    }
+    const [latestId, last, , updatedAt] = lr;
 
     if (SLOT_ALIGNED[chain] && latestId > 0n) {
       const target = latestId + HISTORY * ((roundId - latestId) / HISTORY);
@@ -383,7 +384,12 @@ export async function relayExact(
       results.push({ ...base, skipped: `mirror: not configured on ${chain}` });
       continue;
     }
-    const [latestId] = await pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "latestRound", args: [id] });
+    const lr = await pub.readContract({ address: d.oracle, abi: kursOracleAbi, functionName: "latestRound", args: [id] }).catch((e: Error) => e);
+    if (lr instanceof Error) {
+      results.push({ ...base, error: `mirror latestRound: ${lr.message.split("\n")[0]}` });
+      continue;
+    }
+    const [latestId] = lr;
     if (roundId <= latestId) {
       results.push({ ...base, skipped: `mirror: ${chain} already at round ${latestId}` });
       continue;
