@@ -16,6 +16,7 @@ const chain = { id: await pub.getChainId(), name: "portaldot", nativeCurrency: {
 const before = await pub.getBalance({ address: deployer.address });
 
 for (const k of ["REPORTER_1_PK", "REPORTER_2_PK", "REPORTER_3_PK", "REPORTER_4_PK", "REPORTER_5_PK", "SAFE_SIGNER_1_PK", "SAFE_SIGNER_2_PK", "SAFE_SIGNER_3_PK"]) {
+  if (!process.env[k]) continue; // CI holds only the deployer and reporter keys
   const acct = privateKeyToAccount(process.env[k] as Hex);
   const bal = await pub.getBalance({ address: acct.address });
   if (bal < parseEther("1")) continue;
@@ -32,6 +33,7 @@ await cryptoWaitReady();
 const api = await ApiPromise.create({ provider: new WsProvider("wss://test-node-v3.portaldot.dev"), noInitWarn: true });
 const kr = new Keyring({ type: "sr25519", ss58Format: 42 });
 for (const k of ["A", "B", "C"]) {
+  if (!process.env[`SIGNER_${k}_MNEMONIC`]) continue; // multisig keys never go to CI
   const pair = kr.addFromUri(process.env[`SIGNER_${k}_MNEMONIC`]!);
   const { data } = (await api.query.system.account(pair.address)) as any;
   // native balances use the chain's own decimals (14 on Portaldot), not the EVM's 18

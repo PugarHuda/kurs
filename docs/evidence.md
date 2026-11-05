@@ -184,6 +184,14 @@ GBP/USD, USD/JPY and USD/CNY stay Sepolia-only: a script run also announced them
 
 The existing adapters serve them with no new contract. Read live on Sepolia: Band `getReferenceData("EUR","JPY")` = 178.1516 (EUR/USD x USD/JPY), `("XAU","EUR")` = 3,589.94, `("GBP","CNY")` = 8.9897; DIA `getValue("XAU/USD")` = 4,037.60.
 
+### KursRemit (ink! v6, PolkaVM) on Portaldot V3: cross-VM read of the Solidity oracle
+
+| Step | Result | Transaction |
+|---|---|---|
+| deploy 7,240 bytes of PolkaVM code from the EVM deployer key | `0x26d22f75a6d33b5bdb4e598335826f3fa8553530`, block 337224, 583.4 tPOT (Revive deposit) | `0x9d5fb52446e53336b9e3b75eaac81de5fdcd13cd958991e8b57632009d761b00` |
+| `latest()` (ink!) vs `latestRound(USD/IDR)` (Solidity) | both round 29898288, answer 18,069.00 IDR per USD | eth_call |
+| `quote_and_log(10000)` | success, one `Quoted` event | `0x8e20eaa618db32ed27513f68a3abe99cfec45d9bbb07c90b6e914dc98e1cd3b4` |
+
 ### Chainlink Feed Registry and global ERC-7726 (read live)
 
 Deployed and read by `reporter/scripts/deploy-global.ts`; output in [`docs/global-sepolia.txt`](global-sepolia.txt). Both Sourcify exact.

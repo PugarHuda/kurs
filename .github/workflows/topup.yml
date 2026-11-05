@@ -1,0 +1,41 @@
+# Keeps the relay's gas payer funded after the hackathon: every 6 hours, if the deployer holds
+# less than 100 tPOT, claim the public testnet faucet for the deployer and the 5 reporter keys
+# (the same keys the relay already uses) and sweep the claims to the deployer. The multisig
+# signer keys never leave the owners' machines, so they are not part of this.
+name: topup
+on:
+  schedule:
+    - cron: "20 */6 * * *" # eligibility checks are free; a claim is made only below the threshold
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: topup
+  cancel-in-progress: false
+
+jobs:
+  topup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DEPLOYER_PK: ${{ secrets.DEPLOYER_PK }}
+      REPORTER_1_PK: ${{ secrets.REPORTER_1_PK }}
+      REPORTER_2_PK: ${{ secrets.REPORTER_2_PK }}
+      REPORTER_3_PK: ${{ secrets.REPORTER_3_PK }}
+      REPORTER_4_PK: ${{ secrets.REPORTER_4_PK }}
+      REPORTER_5_PK: ${{ secrets.REPORTER_5_PK }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: reporter
+      - name: claim the faucet if the deployer is below 100 tPOT
+        working-directory: reporter
+        run: npx tsx scripts/topup.ts
+      - name: forward reporter balances to the deployer
+        working-directory: reporter
+        run: npx tsx scripts/sweep.ts

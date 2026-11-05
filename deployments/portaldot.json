@@ -59,7 +59,9 @@
     "erc7412 pull 2/2: KursConverter.convert(10000)": "0x2a0fe924826fc78c8471bc9ed99afa295b86a761b20feb793cf9d435851bedcf",
     "deploy dia": "0xebe1b0494dc903215ea4454582631c6839bdbb798d4d9b00e8b1b841fb754af4",
     "aggregator EUR/USD": "0xfa62fe806fb71039d644a24e880311580f7f471dafd8abea6081ead68adc6ded",
-    "aggregator XAU/USD": "0x96876252c6c47e7a2b0f532baf4d2d5fcab5a046ed3d19ddd5f8c66ecba5c6d6"
+    "aggregator XAU/USD": "0x96876252c6c47e7a2b0f532baf4d2d5fcab5a046ed3d19ddd5f8c66ecba5c6d6",
+    "deploy KursRemit (ink! v6)": "0x9d5fb52446e53336b9e3b75eaac81de5fdcd13cd958991e8b57632009d761b00",
+    "KursRemit quote_and_log(10000)": "0x8e20eaa618db32ed27513f68a3abe99cfec45d9bbb07c90b6e914dc98e1cd3b4"
   },
   "deployedAt": "2026-11-03T01:38:01.102Z",
   "converter": "0xbfc639efc469056d9d4dcd8d4215060bae1fd676",
@@ -238,5 +240,6 @@
     }
   },
   "dia": "0x969b85f2c66b8504bb4f33e16333e7328187dfd9",
-  "deployBlock": 299546
+  "deployBlock": 299546,
+  "kursRemit": "0x26d22f75a6d33b5bdb4e598335826f3fa8553530"
 }
