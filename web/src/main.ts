@@ -193,7 +193,7 @@ function renderDetail(s: Snapshot) {
   const reporters = s.reporters
     .map((r, i) => {
       const signed = ev ? (ev.signerBitmap >> i) & 1 : 0;
-      return `<li class="${signed ? "signed" : ""}"><i class="lamp${signed ? " on" : ""}"></i>${link(d, "addr", r)}<span>${signed ? "signed" : "no signature"}</span></li>`;
+      return `<li class="${signed ? "signed" : ""}"><i class="lamp${signed ? " on" : ""}"></i>${link(d, "addr", r)}<span>${!ev ? "no round here yet" : signed ? "signed" : "no signature"}</span></li>`;
     })
     .join("");
 
@@ -416,7 +416,7 @@ function renderParity(f: FeedState) {
     // a network that does not serve the feed has nothing to compare
     .filter((r) => r.st && r.st.configured !== false && r.st.roundId > 0n);
   if (rows.length < 2) {
-    $("#parity").innerHTML = `<p class="muted">Kurs is deployed on one network so far. Run <code>kurs once</code> with <code>KURS_CHAINS=portaldot,sepolia</code> to relay the same signed rounds to Sepolia.</p>`;
+    $("#parity").innerHTML = `<p class="muted">${rows.length ? `Only ${esc(NETWORKS[rows[0].d.chain].label)} has a round of this feed so far` : "No network has a round of this feed yet"}, so there is nothing to compare. Feeds served on both networks show the same signed round on each.</p>`;
     return;
   }
   const ref = rows[0].st!;
