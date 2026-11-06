@@ -28,7 +28,7 @@
   },
   {
    "key": "s7",
-   "text": "ink! contracts read the same oracle. On pallet revive, the KursRemit ink! version six contract calls the Solidity oracle through its ABI, and gets exactly the same round."
+   "text": "ink! contracts read the same oracle, live. KursRemit, an ink! version six contract deployed on Portaldot, calls the Solidity oracle cross VM through its ABI, and the dashboard asks it directly: it returns exactly the same round as the board above."
   },
   {
    "key": "s8g",
@@ -36,11 +36,11 @@
   },
   {
    "key": "s8",
-   "text": "Kurs is built for Revive's storage deposits: opening a storage slot costs eight tPOT and overwriting one a tenth, so every Portaldot round reuses its slot. An hourly relay mirrors the identical signed bundle to Ethereum, a health endpoint watches every feed, and a hundred and thirteen tests plus nine symbolic proofs cover it all."
+   "text": "Kurs is built for Revive's storage deposits: opening a storage slot costs eight tPOT and overwriting one a tenth, so every Portaldot round reuses its slot. A relay mirrors the identical signed bundle to Ethereum every hour, a workflow claims the faucet to keep its gas topped up, and a hundred and forty eight tests plus nine symbolic proofs cover it all."
   },
   {
    "key": "s8a",
-   "text": "Existing apps need no new code. The same signed rounds answer the interfaces they already call: Chainlink, Pyth, Aave and Morpho, and DIA and Band, the oracles Polkadot apps on Moonbeam and Astar read today. Here all of them read one live round. AI agents can ask Kurs through an MCP server, or buy a freshly signed bundle per call with x402."
+   "text": "Existing apps need no new code. The same signed rounds answer the interfaces they already call: Chainlink, Pyth, Aave and Morpho, DIA and Band, the oracles Polkadot apps read today, and Portix, the stock lending market built at this hacker house. Here all of them read one live round. AI agents can ask Kurs through an MCP server, or buy a freshly signed bundle per call with x402."
   },
   {
    "key": "s9",

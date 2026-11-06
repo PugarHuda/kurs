@@ -99,10 +99,12 @@ await scene(
   },
 );
 
-// 7: ink! v6 reads the Solidity oracle (real run output)
+// 7: ink! v6 KursRemit, live on Portaldot, reads the Solidity oracle cross-VM (dashboard asks it)
 await scene("s7", async () => {
-  const out = readFileSync(resolve(ROOT, "docs/ink-e2e-local.txt"), "utf8").trim();
-  await terminal("Cross-VM on pallet-revive: ink! v6 reads the Solidity oracle", "npm run ink-e2e", out);
+  await page.goto(`${SITE}/?net=portaldot&feed=USD%2FIDR`, { waitUntil: "load" });
+  await page.locator("#inkread").getByText("cross-VM").waitFor({ timeout: 60_000 });
+  await page.locator("#inkread").scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, 260));
 });
 
 // 8g: governance panel, read live from owner() on each network

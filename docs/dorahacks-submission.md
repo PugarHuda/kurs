@@ -9,7 +9,7 @@
 | Brief description | Price feeds for Portaldot V3, signed by independent reporters, readable from Solidity and ink!, portable to any EVM chain. Push or pull (ERC-7412). |
 | Tags | Crypto / Web3 |
 | GitHub | https://github.com/PugarHuda/kurs |
-| Video | https://kurs-ten-zeta.vercel.app/kurs-demo.mp4 (3:13) |
+| Video | https://kurs-ten-zeta.vercel.app/kurs-demo.mp4 (3:25, AI voice + subtitles) |
 | Website | https://kurs-ten-zeta.vercel.app |
 
 ## Organizer questions (submission form)

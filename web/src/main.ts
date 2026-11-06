@@ -530,7 +530,7 @@ async function renderGas(d: Deployment, el: HTMLElement) {
     const hours = Math.floor(bal / BURN_PER_HOUR);
     el.insertAdjacentHTML(
       "beforeend",
-      `<p id="gas">Relay gas: the transmitter holds <strong>${bal.toFixed(1)} tPOT</strong>, about <strong>${hours < 48 ? `${hours} h` : `${Math.floor(hours / 24)} days`}</strong> of rounds at ~${BURN_PER_HOUR} tPOT/h. It only pays gas; a faucet top-up runs every 6 h below 100 tPOT, and anyone can send tPOT to <code>${esc(short(RELAYER))}</code> (<a href="https://github.com/PugarHuda/kurs#if-a-portaldot-feed-looks-stale-it-is-out-of-gas-and-anyone-can-fix-it" target="_blank" rel="noopener">how</a>).</p>`,
+      `<p id="gas">Relay gas: the transmitter holds <strong>${bal.toFixed(1)} tPOT</strong>, about <strong>${hours < 48 ? `${hours} h` : `${Math.floor(hours / 24)} days`}</strong> of rounds at ~${BURN_PER_HOUR} tPOT/h. It only pays gas; a faucet top-up runs every hour below 100 tPOT, and anyone can send tPOT to <code>${esc(short(RELAYER))}</code> (<a href="https://github.com/PugarHuda/kurs#if-a-portaldot-feed-looks-stale-it-is-out-of-gas-and-anyone-can-fix-it" target="_blank" rel="noopener">how</a>).</p>`,
     );
   } catch {
     /* informational only; the owner panel above already reports read failures */

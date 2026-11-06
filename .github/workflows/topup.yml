@@ -5,7 +5,7 @@
 name: topup
 on:
   schedule:
-    - cron: "20 */6 * * *" # eligibility checks are free; a claim is made only below the threshold
+    - cron: "20 * * * *" # eligibility checks are free; a claim is made only below the threshold
   workflow_dispatch:
 
 permissions:

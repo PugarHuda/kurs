@@ -13,7 +13,7 @@
 
 Portaldot Hacker House 2026 · Track: **Multi-Chain & Cross-Chain Infra**
 
-**Live dashboard:** https://kurs-ten-zeta.vercel.app · **Evidence:** [`docs/evidence.md`](docs/evidence.md) · **Deck:** [`docs/kurs-deck.pdf`](docs/kurs-deck.pdf)
+**Live dashboard:** https://kurs-ten-zeta.vercel.app · **Evidence:** [`docs/evidence.md`](docs/evidence.md) · **Deck:** [`docs/kurs-deck.pdf`](docs/kurs-deck.pdf) · **Demo video:** [kurs-demo.mp4](https://kurs-ten-zeta.vercel.app/kurs-demo.mp4) (3:25; recorded live with Playwright, AI narration, subtitles via Remotion: `video/`)
 
 | Network | KursOracle | Status |
 |---|---|---|
@@ -22,7 +22,7 @@ Portaldot Hacker House 2026 · Track: **Multi-Chain & Cross-Chain Infra**
 
 ### If a Portaldot feed looks stale: it is out of gas, and anyone can fix it
 
-Every Portaldot round costs the relay ~0.1 tPOT (~12 tPOT a day for 13 feeds). Testnet tPOT comes only from the [POT Starter Hub faucet](https://pot-starter-hub.vercel.app/hub) (10 tPOT per wallet per day), so the gas payer can run dry. [`topup.yml`](.github/workflows/topup.yml) claims the faucet for the relay's own keys every 6 hours whenever the deployer holds less than 100 tPOT, and the relay resumes by itself as soon as gas arrives. To refill it directly, send tPOT to the deployer (it only pays gas, it holds no admin rights):
+Every Portaldot round costs the relay ~0.1 tPOT (~12 tPOT a day for 13 feeds). Testnet tPOT comes only from the [POT Starter Hub faucet](https://pot-starter-hub.vercel.app/hub) (10 tPOT per wallet per day), so the gas payer can run dry. [`topup.yml`](.github/workflows/topup.yml) claims the faucet for the relay's own keys every hour whenever the deployer holds less than 100 tPOT, and the relay resumes by itself as soon as gas arrives. To refill it directly, send tPOT to the deployer (it only pays gas, it holds no admin rights):
 
 ```
 5CjEvXjS5WV7yUmqVQKoT9n1mTZpLQMcVaovDQXan1HAqYTx    (native, any Polkadot wallet)
