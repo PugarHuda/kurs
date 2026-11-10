@@ -42,7 +42,7 @@ jobs:
           exit 1
       - name: keep the addresses even if the push failed
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: portaldot-deployments
           path: deployments/portaldot.json
