@@ -3,7 +3,7 @@
   "type": "module",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
-    "viem": "2.57.14",
+    "viem": "2.57.16",
     "zod": "^4.6.7"
   }
 }
